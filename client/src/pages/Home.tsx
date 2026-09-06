@@ -72,6 +72,8 @@ type ExamData = {
   title: string;
   notice: string;
   instructions: string;
+  extraActivity: string;
+  extraActivityLayout: "none" | "single" | "double";
   fontFamily: "Arial" | "Times New Roman";
   fontSize: string;
   antiCheat: boolean;
@@ -94,6 +96,8 @@ const initialExam: ExamData = {
   title: "AVALIAÇÃO",
   notice: "",
   instructions: "",
+  extraActivity: "",
+  extraActivityLayout: "none",
   fontFamily: "Arial",
   fontSize: "12",
   antiCheat: false,
@@ -226,6 +230,23 @@ function QuestionPreview({ question, index }: { question: Question; index: numbe
   );
 }
 
+function PaperPage({ exam, logoPreview, pageMode, variantNumber, questions, startIndex, extraActivity, extraActivityLayout, pageNumber, pageCount }: { exam: ExamData; logoPreview: string; pageMode: "single" | "double"; variantNumber: number; questions: Question[]; startIndex: number; extraActivity?: string; extraActivityLayout?: "none" | "single" | "double"; pageNumber: number; pageCount: number }) {
+  const isExtra = Boolean(extraActivity);
+  return <div className="paper">
+    {!isExtra && <div className="paper-header-table">
+      <div className="paper-logo-cell">{logoPreview ? <img src={logoPreview} alt="Logo" /> : <div className="logo-placeholder">LOGO<br />DA ESCOLA</div>}</div>
+      <div className="paper-school-cell">{exam.schoolName}{exam.schoolName && exam.level ? ` – ${exam.level.toUpperCase()}` : exam.level.toUpperCase()}</div>
+      <div className="paper-info-row"><span><b>DISCIPLINA:</b> {exam.subject || "________________"}</span><span><b>PROFESSOR(A):</b> {exam.teacher || "________________"}</span><span><b>BIMESTRE:</b> {exam.bimester ? exam.bimester.toUpperCase() : "____"}</span></div>
+      <div className="paper-student-row"><span><b>ALUNO(A):</b> {exam.student || "____________________________________________________________"}</span></div>
+      <div className="paper-info-row"><span><b>ANO:</b> {exam.className || "____"}</span><span><b>TURMA:</b> __________</span><span><b>TURNO:</b> {exam.shift || "____"}</span><span><b>DATA:</b> {exam.dateDay || "____"}/{exam.dateMonth || "____"}/2026</span></div>
+    </div>}
+    {!isExtra && pageNumber === 1 && <div className="paper-title-block" style={{ fontFamily: exam.fontFamily, fontSize: `${exam.fontSize}px` }}><h1>{exam.title || "AVALIAÇÃO"}</h1>{exam.notice && <div className="paper-notice" dangerouslySetInnerHTML={{ __html: exam.notice }} />}{exam.instructions && <p dangerouslySetInnerHTML={{ __html: exam.instructions }} />}</div>}
+    {isExtra && <div className="paper-title-block extra-activity-title"><h1>ATIVIDADE EXTRA</h1></div>}
+    {isExtra ? <div className={`extra-activity-content ${extraActivityLayout === "single" ? "single-column" : "double-column"}`} dangerouslySetInnerHTML={{ __html: extraActivity || "" }} /> : <div className={`paper-columns ${pageMode === "single" ? "single-column" : ""}`} style={{ fontFamily: exam.fontFamily, fontSize: `${exam.fontSize}px` }}>{questions.map((question, index) => <QuestionPreview question={question} index={startIndex + index} key={question.id} />)}</div>}
+    <div className="paper-footer"><span>TIPO {variantNumber}{isExtra ? " · ATIVIDADE EXTRA" : ""}</span><span>PÁGINA {pageNumber} DE {pageCount}</span></div>
+  </div>;
+}
+
 async function examToParagraphs(question: Question, index: number) {
   const plainPrompt = question.prompt.replace(/<[^>]+>/g, "").replace(/&nbsp;/g, " ") || "Escreva o enunciado da questão...";
   const prompt = new Paragraph({
@@ -316,6 +337,8 @@ export default function Home() {
   }, [exam.antiCheat, exam.variationCount, exam.shuffleDiscursive, questions]);
 
   const previewQuestions = variants[activeVariant - 1]?.questions || questions;
+  const questionsPerPage = pageMode === "single" ? 4 : 8;
+  const previewQuestionPages = useMemo(() => Array.from({ length: Math.max(1, Math.ceil(previewQuestions.length / questionsPerPage)) }, (_, index) => previewQuestions.slice(index * questionsPerPage, (index + 1) * questionsPerPage)), [previewQuestions, questionsPerPage]);
   useEffect(() => {
     if (activeVariant > variants.length) setActiveVariant(1);
   }, [activeVariant, variants.length]);
@@ -616,6 +639,8 @@ export default function Home() {
               <div className="field rich-field-wrap"><span>Avisos, textos ou conteúdo complementar</span><RichTextField value={exam.notice} onChange={(value) => updateExam("notice", value)} placeholder="Digite aqui um texto, aviso, texto-base ou instruções..." /></div>
               <div className="field rich-field-wrap"><span>Instruções para a turma</span><RichTextField value={exam.instructions} onChange={(value) => updateExam("instructions", value)} placeholder="Ex.: Leia cada questão com atenção..." /></div>
               <div className="field-grid two-columns"><label className="field"><span>Fonte da prova</span><select value={exam.fontFamily} onChange={(event) => updateExam("fontFamily", event.target.value as ExamData["fontFamily"])}><option>Arial</option><option>Times New Roman</option></select></label><label className="field"><span>Tamanho da fonte</span><select value={exam.fontSize} onChange={(event) => updateExam("fontSize", event.target.value)}>{["8", "9", "10", "11", "12", "13", "14", "15", "16"].map((size) => <option key={size} value={size}>{size} pt</option>)}</select></label></div>
+              <div className="field rich-field-wrap"><span>Atividade extra (opcional)</span><RichTextField value={exam.extraActivity} onChange={(value) => updateExam("extraActivity", value)} placeholder="Insira o texto da atividade extra ou use a imagem da atividade em uma questão..." /></div>
+              <label className="field"><span>Distribuição da atividade extra</span><select value={exam.extraActivityLayout} onChange={(event) => updateExam("extraActivityLayout", event.target.value as ExamData["extraActivityLayout"])}><option value="none">Não inserir atividade extra</option><option value="single">Uma coluna</option><option value="double">Duas colunas · frente e verso</option></select></label>
               <div className="paper-mode-control"><span>Distribuição da folha</span><div><button className={pageMode === "single" ? "selected" : ""} onClick={() => setPageMode("single")}>1 lado · uma coluna</button><button className={pageMode === "double" ? "selected" : ""} onClick={() => setPageMode("double")}>2 lados · duas colunas</button></div></div>
               <div className="tip-card"><Sparkles size={18} /><div><strong>Atividades diferentes também cabem aqui</strong><p>Use o tipo “Atividade / jogo” para reservar um espaço para caça-palavras, cruzadinha ou outro material.</p></div></div>
               <button className="reset-button" onClick={resetDraft}><RotateCcw size={15} /> Restaurar modelo inicial</button>
@@ -630,18 +655,13 @@ export default function Home() {
             <div className="preview-actions"><button className="secondary-button" onClick={exportPdf}><Printer size={16} /> Exportar PDF</button><button className="primary-button" onClick={exportDocx}><FileDown size={16} /> Baixar DOCX</button><button className="key-button" onClick={downloadAnswerKey}><KeyRound size={16} /> Gabarito DOCX</button><button className="key-button" onClick={printAnswerKey}><Printer size={16} /> Gabarito PDF</button></div>
           </div>
           <div className="preview-stage">
-            <div className="paper" id="paper-preview">
-              <div className="paper-header-table">
-                <div className="paper-logo-cell">{logoPreview ? <img src={logoPreview} alt="Logo" /> : <div className="logo-placeholder">LOGO<br />DA ESCOLA</div>}</div>
-                <div className="paper-school-cell">{exam.schoolName}{exam.schoolName && exam.level ? ` – ${exam.level.toUpperCase()}` : exam.level.toUpperCase()}</div>
-                <div className="paper-info-row"><span><b>DISCIPLINA:</b> {exam.subject || "________________"}</span><span><b>PROFESSOR(A):</b> {exam.teacher || "________________"}</span><span><b>BIMESTRE:</b> {exam.bimester ? exam.bimester.toUpperCase() : "____"}</span></div>
-                <div className="paper-student-row"><span><b>ALUNO(A):</b> {exam.student || "____________________________________________________________"}</span></div>
-                <div className="paper-info-row"><span><b>ANO:</b> {exam.className || "____"}</span><span><b>TURMA:</b> __________</span><span><b>TURNO:</b> {exam.shift || "____"}</span><span><b>DATA:</b> {exam.dateDay || "____"}/{exam.dateMonth || "____"}/2026</span></div>
-              </div>
-              <div className="paper-title-block" style={{ fontFamily: exam.fontFamily, fontSize: `${exam.fontSize}px` }}><h1>{exam.title || "AVALIAÇÃO"}</h1>{exam.notice && <div className="paper-notice" dangerouslySetInnerHTML={{ __html: exam.notice }} />}{exam.instructions && <p dangerouslySetInnerHTML={{ __html: exam.instructions }} />}</div>
-              <div className="student-fields"><div><span>Aluno(a)</span><strong>{exam.student || ""}</strong></div><div><span>Professor(a)</span><strong>{exam.teacher || ""}</strong></div><div className="small-field"><span>Data</span><strong>{exam.dateDay || "____"} / {exam.dateMonth || "____"}</strong></div><div className="small-field"><span>Turno</span><strong>{exam.shift || "____"}</strong></div></div>
-              <div className={`paper-columns ${pageMode === "single" ? "single-column" : ""}`} style={{ fontFamily: exam.fontFamily, fontSize: `${exam.fontSize}px` }}>{previewQuestions.map((question, index) => <QuestionPreview question={question} index={index} key={question.id} />)}</div>
-              <div className="paper-footer"><span>TIPO {activeVariant}</span><span>{previewQuestions.length} questão{previewQuestions.length === 1 ? "" : "ões"}</span></div>
+            <div id="paper-preview" className="paper-set">
+              {previewQuestionPages.map((pageQuestions, pageIndex) => <PaperPage key={`active-${activeVariant}-${pageIndex}`} exam={exam} logoPreview={logoPreview} pageMode={pageMode} variantNumber={activeVariant} questions={pageQuestions} startIndex={pageIndex * questionsPerPage} pageNumber={pageIndex + 1} pageCount={previewQuestionPages.length} />)}
+              {exam.extraActivity && <PaperPage exam={exam} logoPreview={logoPreview} pageMode={pageMode} variantNumber={activeVariant} questions={[]} startIndex={0} extraActivity={exam.extraActivity} extraActivityLayout={exam.extraActivityLayout} pageNumber={previewQuestionPages.length + 1} pageCount={previewQuestionPages.length + 1} />}
+              {variants.filter((variant) => variant.number !== activeVariant).map((variant) => {
+                const pages = Array.from({ length: Math.max(1, Math.ceil(variant.questions.length / questionsPerPage)) }, (_, index) => variant.questions.slice(index * questionsPerPage, (index + 1) * questionsPerPage));
+                return <div className="print-variant" key={`print-variant-${variant.number}`}>{pages.map((pageQuestions, pageIndex) => <PaperPage key={`${variant.number}-${pageIndex}`} exam={exam} logoPreview={logoPreview} pageMode={pageMode} variantNumber={variant.number} questions={pageQuestions} startIndex={pageIndex * questionsPerPage} pageNumber={pageIndex + 1} pageCount={pages.length} />)}{exam.extraActivity && <PaperPage exam={exam} logoPreview={logoPreview} pageMode={pageMode} variantNumber={variant.number} questions={[]} startIndex={0} extraActivity={exam.extraActivity} extraActivityLayout={exam.extraActivityLayout} pageNumber={pages.length + 1} pageCount={pages.length + 1} />}</div>;
+              })}
             </div>
             <div className="answer-key-print"><h1>GABARITO</h1><h2>{exam.title || "AVALIAÇÃO"}</h2>{variants.map((variant) => <section key={variant.number}><h3>TIPO {variant.number}</h3>{variant.questions.filter((question) => question.type === "multipla").map((question) => <p key={question.id}>{variant.questions.findIndex((item) => item.id === question.id) + 1}. <strong>{question.correctOption === undefined || question.correctOption === null ? "não informado" : String.fromCharCode(65 + question.correctOption)}</strong></p>)}</section>)}</div>
           </div>
