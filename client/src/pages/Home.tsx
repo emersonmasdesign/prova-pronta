@@ -488,14 +488,12 @@ export default function Home() {
           </div>
           <div className="preview-stage">
             <div className="paper" id="paper-preview">
-              <div className="paper-header">
-                <div className="paper-brand">
-                  <div className="paper-logo">{logoPreview ? <img src={logoPreview} alt="Logo" /> : <LogoMark small />}</div>
-                  <div><h3>{exam.schoolName || "Nome da escola"}</h3><span>{exam.level || "Nível de ensino"} <b>·</b> {exam.subject || "Disciplina"}</span></div>
-                </div>
-                <div className="paper-code">{exam.bimester || "Bimestre"}<br /><strong>{exam.className || "Turma"}</strong></div>
+              <div className="paper-header-table">
+                <div className="paper-logo-cell">{logoPreview ? <img src={logoPreview} alt="Logo" /> : <div className="logo-placeholder">LOGO<br />DA ESCOLA</div>}</div>
+                <div className="paper-school-cell">{exam.schoolName || "Nome da escola"} – {exam.level || "Nível de ensino"}</div>
+                <div className="paper-info-row"><span><b>DISCIPLINA:</b> {exam.subject || "________________"}</span><span><b>PROFESSOR(A):</b> {exam.teacher || "________________"}</span><span><b>BIMESTRE:</b> {exam.bimester || "____"}</span></div>
+                <div className="paper-info-row"><span><b>ALUNO(A):</b> {exam.student || ""}</span><span><b>ANO:</b> {exam.className || "____"}</span><span><b>TURMA:</b> __________</span><span><b>TURNO:</b> {exam.shift || "____"}</span><span><b>DATA:</b> {exam.dateDay || "____"}/{exam.dateMonth || "____"}/2026</span></div>
               </div>
-              <div className="paper-rule" />
               <div className="paper-title-block"><h1>{exam.title || "Título da avaliação"}</h1><p>{exam.instructions || "Leia cada questão com atenção e responda com clareza."}</p></div>
               <div className="student-fields"><div><span>Aluno(a)</span><strong>{exam.student || ""}</strong></div><div><span>Professor(a)</span><strong>{exam.teacher || ""}</strong></div><div className="small-field"><span>Data</span><strong>{exam.dateDay || "____"} / {exam.dateMonth || "____"}</strong></div><div className="small-field"><span>Turno</span><strong>{exam.shift || "____"}</strong></div></div>
               <div className="paper-columns">{questions.map((question, index) => <QuestionPreview question={question} index={index} key={question.id} />)}</div>
