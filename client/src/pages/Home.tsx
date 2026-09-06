@@ -146,6 +146,9 @@ function Field({
 
 function RichTextField({ value, onChange, placeholder }: { value: string; onChange: (value: string) => void; placeholder: string }) {
   const editorRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (editorRef.current && editorRef.current.innerHTML !== value) editorRef.current.innerHTML = value;
+  }, [value]);
   const command = (name: string, commandValue?: string) => {
     editorRef.current?.focus();
     document.execCommand(name, false, commandValue);
@@ -160,9 +163,10 @@ function RichTextField({ value, onChange, placeholder }: { value: string; onChan
         <span />
         <button type="button" onMouseDown={(event) => event.preventDefault()} onClick={() => command("justifyLeft")}>≡</button>
         <button type="button" onMouseDown={(event) => event.preventDefault()} onClick={() => command("justifyCenter")}>≡</button>
+        <button type="button" onMouseDown={(event) => event.preventDefault()} onClick={() => command("justifyFull")} title="Justificar">☰</button>
         <button type="button" onMouseDown={(event) => event.preventDefault()} onClick={() => command("insertUnorderedList")}>•</button>
       </div>
-      <div ref={editorRef} className="rich-editor" contentEditable suppressContentEditableWarning dangerouslySetInnerHTML={{ __html: value }} data-placeholder={placeholder} onInput={(event) => onChange(event.currentTarget.innerHTML)} />
+      <div ref={editorRef} className="rich-editor" contentEditable suppressContentEditableWarning data-placeholder={placeholder} onInput={(event) => onChange(event.currentTarget.innerHTML)} />
     </div>
   );
 }
@@ -201,9 +205,7 @@ function QuestionPreview({ question, index }: { question: Question; index: numbe
       {question.image && <img className="question-image" src={question.image} alt="Imagem da questão" />}
       {question.image && question.imageCaption && <div className="question-caption">{question.imageCaption}</div>}
       {question.secondaryPrompt && <div className="question-secondary" dangerouslySetInnerHTML={{ __html: question.secondaryPrompt }} />}
-      {question.type === "jogo" ? (
-        <div className="game-placeholder">{question.gameKind || "Atividade lúdica"}<span>Insira ou desenhe o material da atividade aqui.</span></div>
-      ) : question.type === "multipla" ? (
+      {question.type === "jogo" ? null : question.type === "multipla" ? (
         <div className="options-preview">
           {question.options.map((option, optionIndex) => (
             <div className="option-preview" key={`${question.id}-${optionIndex}`}>
@@ -252,7 +254,7 @@ async function examToParagraphs(question: Question, index: number) {
       children: [new TextRun({ text: `${String.fromCharCode(65 + optionIndex)}) `, bold: true }), new TextRun(option || "Alternativa")],
     }))];
   }
-  if (question.type === "jogo") return [prompt, ...(imageParagraph ? [imageParagraph] : []), ...(imageCaption ? [imageCaption] : []), ...(secondaryPrompt ? [secondaryPrompt] : []), new Paragraph({ children: [new TextRun({ text: `${question.gameKind || "Atividade lúdica"}: espaço reservado para a atividade.`, italics: true })] })];
+  if (question.type === "jogo") return [prompt, ...(imageParagraph ? [imageParagraph] : []), ...(imageCaption ? [imageCaption] : []), ...(secondaryPrompt ? [secondaryPrompt] : [])];
   return [prompt, ...(imageParagraph ? [imageParagraph] : []), ...(imageCaption ? [imageCaption] : []), ...(secondaryPrompt ? [secondaryPrompt] : []), ...[1, 2, 3].map(() => new Paragraph({
     spacing: { after: 220 },
     border: { bottom: { color: "AAB4BF", style: BorderStyle.SINGLE, size: 4 } },
