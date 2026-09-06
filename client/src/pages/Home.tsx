@@ -39,7 +39,7 @@ import {
 } from "docx";
 import { toast } from "sonner";
 
-type QuestionType = "discursiva" | "multipla";
+type QuestionType = "discursiva" | "multipla" | "jogo";
 
 type Question = {
   id: number;
@@ -47,6 +47,8 @@ type Question = {
   prompt: string;
   points: string;
   options: string[];
+  image?: string;
+  gameKind?: string;
 };
 
 type ExamData = {
@@ -61,50 +63,34 @@ type ExamData = {
   dateDay: string;
   dateMonth: string;
   title: string;
+  notice: string;
   instructions: string;
+  fontFamily: "Arial" | "Times New Roman";
+  fontSize: string;
   logo?: string;
 };
 
 const initialExam: ExamData = {
-  schoolName: "Colégio Horizonte",
-  level: "Ensino Fundamental II",
-  subject: "Ciências",
-  teacher: "Prof.ª Marina Alves",
-  bimester: "3º bimestre",
+  schoolName: "",
+  level: "",
+  subject: "",
+  teacher: "",
+  bimester: "",
   student: "",
-  className: "8º ano A",
-  shift: "Manhã",
+  className: "",
+  shift: "",
   dateDay: "",
   dateMonth: "",
-  title: "AVALIAÇÃO DO 3º BIMESTRE",
-  instructions: "Leia cada questão com atenção e responda com clareza.",
+  title: "AVALIAÇÃO",
+  notice: "",
+  instructions: "",
+  fontFamily: "Arial",
+  fontSize: "10",
 };
 
-const initialQuestions: Question[] = [
-  {
-    id: 1,
-    type: "discursiva",
-    prompt: "Explique, com suas palavras, por que a preservação da água é importante para a vida no planeta.",
-    points: "1,0",
-    options: ["", "", "", ""],
-  },
-  {
-    id: 2,
-    type: "multipla",
-    prompt: "Qual alternativa apresenta uma fonte de energia renovável?",
-    points: "1,0",
-    options: ["Carvão mineral", "Petróleo", "Energia solar", "Gás natural"],
-  },
-  {
-    id: 3,
-    type: "discursiva",
-    prompt: "Observe o conteúdo estudado em aula e relacione-o a uma situação do cotidiano.",
-    points: "1,0",
-    options: ["", "", "", ""],
-  },
-];
+const initialQuestions: Question[] = [{ id: 1, type: "discursiva", prompt: "", points: "", options: ["", "", "", ""] }];
 
-const STORAGE_KEY = "prova-pronta-draft";
+const STORAGE_KEY = "prova-pronta-draft-v3";
 
 function nextQuestionId(questions: Question[]) {
   return questions.length ? Math.max(...questions.map((question) => question.id)) + 1 : 1;
@@ -130,6 +116,29 @@ function Field({
       <span>{label}</span>
       <input type={type} value={value} placeholder={placeholder} onChange={(event) => onChange(event.target.value)} />
     </label>
+  );
+}
+
+function RichTextField({ value, onChange, placeholder }: { value: string; onChange: (value: string) => void; placeholder: string }) {
+  const editorRef = useRef<HTMLDivElement>(null);
+  const command = (name: string, commandValue?: string) => {
+    editorRef.current?.focus();
+    document.execCommand(name, false, commandValue);
+    onChange(editorRef.current?.innerHTML || "");
+  };
+  return (
+    <div className="rich-field">
+      <div className="rich-toolbar" aria-label="Formatação do texto">
+        <button type="button" onMouseDown={(event) => event.preventDefault()} onClick={() => command("bold")}><b>B</b></button>
+        <button type="button" onMouseDown={(event) => event.preventDefault()} onClick={() => command("italic")}><i>I</i></button>
+        <button type="button" onMouseDown={(event) => event.preventDefault()} onClick={() => command("underline")}><u>U</u></button>
+        <span />
+        <button type="button" onMouseDown={(event) => event.preventDefault()} onClick={() => command("justifyLeft")}>≡</button>
+        <button type="button" onMouseDown={(event) => event.preventDefault()} onClick={() => command("justifyCenter")}>≡</button>
+        <button type="button" onMouseDown={(event) => event.preventDefault()} onClick={() => command("insertUnorderedList")}>•</button>
+      </div>
+      <div ref={editorRef} className="rich-editor" contentEditable suppressContentEditableWarning dangerouslySetInnerHTML={{ __html: value }} data-placeholder={placeholder} onInput={(event) => onChange(event.currentTarget.innerHTML)} />
+    </div>
   );
 }
 
@@ -161,10 +170,13 @@ function QuestionPreview({ question, index }: { question: Question; index: numbe
     <div className="question-preview">
       <div className="question-title">
         <strong>{index + 1}.</strong>
-        <span>{question.prompt || "Escreva o enunciado da questão..."}</span>
-        <em>({question.points || "—"} pt)</em>
+        <span dangerouslySetInnerHTML={{ __html: question.prompt || "" }} />
+        {question.points && <em>({question.points} pt)</em>}
       </div>
-      {question.type === "multipla" ? (
+      {question.image && <img className="question-image" src={question.image} alt="Imagem da questão" />}
+      {question.type === "jogo" ? (
+        <div className="game-placeholder">{question.gameKind || "Atividade lúdica"}<span>Insira ou desenhe o material da atividade aqui.</span></div>
+      ) : question.type === "multipla" ? (
         <div className="options-preview">
           {question.options.map((option, optionIndex) => (
             <div className="option-preview" key={`${question.id}-${optionIndex}`}>
@@ -184,23 +196,28 @@ function QuestionPreview({ question, index }: { question: Question; index: numbe
   );
 }
 
-function examToParagraphs(question: Question, index: number) {
+async function examToParagraphs(question: Question, index: number) {
+  const plainPrompt = question.prompt.replace(/<[^>]+>/g, "").replace(/&nbsp;/g, " ") || "Escreva o enunciado da questão...";
   const prompt = new Paragraph({
     spacing: { after: 80 },
     children: [
       new TextRun({ text: `${index + 1}. `, bold: true }),
-      new TextRun({ text: question.prompt || "Escreva o enunciado da questão..." }),
-      new TextRun({ text: ` (${question.points || "—"} pt)`, italics: true, color: "68717D" }),
+      new TextRun({ text: plainPrompt }),
+      ...(question.points ? [new TextRun({ text: ` (${question.points} pt)`, italics: true, color: "68717D" })] : []),
     ],
   });
+  const imageParagraph = question.image ? new Paragraph({
+    children: [new ImageRun({ data: await fetch(question.image).then((response) => response.arrayBuffer()), transformation: { width: 280, height: 160 }, type: question.image.startsWith("data:image/jpeg") ? "jpg" : "png" })],
+  }) : null;
   if (question.type === "multipla") {
-    return [prompt, ...question.options.map((option, optionIndex) => new Paragraph({
+    return [prompt, ...(imageParagraph ? [imageParagraph] : []), ...question.options.map((option, optionIndex) => new Paragraph({
       indent: { left: 340 },
       spacing: { after: 40 },
       children: [new TextRun({ text: `${String.fromCharCode(65 + optionIndex)}) `, bold: true }), new TextRun(option || "Alternativa")],
     }))];
   }
-  return [prompt, ...[1, 2, 3].map(() => new Paragraph({
+  if (question.type === "jogo") return [prompt, ...(imageParagraph ? [imageParagraph] : []), new Paragraph({ children: [new TextRun({ text: `${question.gameKind || "Atividade lúdica"}: espaço reservado para a atividade.`, italics: true })] })];
+  return [prompt, ...(imageParagraph ? [imageParagraph] : []), ...[1, 2, 3].map(() => new Paragraph({
     spacing: { after: 220 },
     border: { bottom: { color: "AAB4BF", style: BorderStyle.SINGLE, size: 4 } },
     children: [new TextRun(" ")],
@@ -227,6 +244,7 @@ export default function Home() {
   const [activeSection, setActiveSection] = useState("identidade");
   const [saved, setSaved] = useState(true);
   const [logoPreview, setLogoPreview] = useState(exam.logo || "");
+  const [pageMode, setPageMode] = useState<"single" | "double">("double");
   const fileRef = useRef<HTMLInputElement>(null);
 
   const updateExam = (key: keyof ExamData, value: string) => {
@@ -253,7 +271,7 @@ export default function Home() {
       return;
     }
     const id = nextQuestionId(questions);
-    setQuestions((current) => [...current, { id, type: "discursiva", prompt: "", points: "1,0", options: ["", "", "", ""] }]);
+    setQuestions((current) => [...current, { id, type: "discursiva", prompt: "", points: "", options: ["", "", "", ""] }]);
     setSaved(false);
     setTimeout(() => document.getElementById(`question-${id}`)?.scrollIntoView({ behavior: "smooth", block: "center" }), 50);
   };
@@ -282,6 +300,7 @@ export default function Home() {
     setExam(initialExam);
     setQuestions(initialQuestions);
     setLogoPreview("");
+    setPageMode("double");
     localStorage.removeItem(STORAGE_KEY);
     setSaved(true);
     toast.success("Modelo inicial restaurado.");
@@ -303,6 +322,13 @@ export default function Home() {
       setLogoPreview(result);
       setSaved(false);
     };
+    reader.readAsDataURL(file);
+  };
+
+  const handleQuestionImage = (id: number, file?: File) => {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => updateQuestion(id, { image: String(reader.result || "") });
     reader.readAsDataURL(file);
   };
 
@@ -341,16 +367,17 @@ export default function Home() {
         new TableRow({ children: [new TableCell({ columnSpan: 2, children: [new Paragraph({ children: [new TextRun({ text: `Aluno(a): ${exam.student || "________________________________________"}`, size: 18 }), new TextRun({ text: `    Turma: ${exam.className || "________"}`, size: 18 }), new TextRun({ text: `    Turno: ${exam.shift || "________"}`, size: 18 })] }), new Paragraph({ children: [new TextRun({ text: `Professor(a): ${exam.teacher || "____________________________"}`, size: 18 }), new TextRun({ text: `    ${exam.bimester || "Bimestre"}`, size: 18 }), new TextRun({ text: `    Data: ____ / ____`, size: 18 })] })] })] }),
       ],
     });
-    const paragraphs = questions.flatMap(examToParagraphs);
+    const paragraphs = (await Promise.all(questions.map(examToParagraphs))).flat();
     const doc = new Document({
       sections: [{
         properties: { page: { margin: { top: 520, right: 520, bottom: 520, left: 520 } } },
         children: [
           details,
-          new Paragraph({ spacing: { before: 120, after: 120 }, children: [new TextRun({ text: exam.instructions || "", italics: true, color: "68717D", size: 17 })] }),
+          ...(exam.notice ? [new Paragraph({ spacing: { before: 120, after: 90 }, children: [new TextRun({ text: exam.notice.replace(/<[^>]+>/g, "").replace(/&nbsp;/g, " "), size: Number(exam.fontSize) * 2 })] })] : []),
+          ...(exam.instructions ? [new Paragraph({ spacing: { before: 90, after: 120 }, children: [new TextRun({ text: exam.instructions.replace(/<[^>]+>/g, "").replace(/&nbsp;/g, " "), italics: true, color: "68717D", size: Number(exam.fontSize) * 2 })] })] : []),
           new Table({
             width: { size: 9200, type: WidthType.DXA },
-            rows: [new TableRow({ children: [new TableCell({ width: { size: 4600, type: WidthType.DXA }, children: paragraphs.filter((_, index) => index % 2 === 0) }), new TableCell({ width: { size: 4600, type: WidthType.DXA }, children: paragraphs.filter((_, index) => index % 2 === 1) })] })],
+            rows: [new TableRow({ children: pageMode === "single" ? [new TableCell({ width: { size: 9200, type: WidthType.DXA }, children: paragraphs })] : [new TableCell({ width: { size: 4600, type: WidthType.DXA }, children: paragraphs.filter((_, index) => index % 2 === 0) }), new TableCell({ width: { size: 4600, type: WidthType.DXA }, children: paragraphs.filter((_, index) => index % 2 === 1) })] })],
           }),
           new Paragraph({ alignment: AlignmentType.RIGHT, spacing: { before: 200 }, children: [new TextRun({ text: `${questions.length} questão${questions.length === 1 ? "" : "ões"} · boa prova!`, italics: true, color: "68717D", size: 16 })] }),
         ],
@@ -425,14 +452,14 @@ export default function Home() {
               </div>
               <div className="field-grid two-columns">
                 <Field label="Nome da escola" value={exam.schoolName} onChange={(value) => updateExam("schoolName", value)} placeholder="Ex.: Colégio Horizonte" />
-                <label className="field"><span>Nível de ensino</span><select value={exam.level} onChange={(event) => updateExam("level", event.target.value)}><option>Educação Infantil</option><option>Ensino Fundamental I</option><option>Ensino Fundamental II</option><option>Ensino Médio</option></select></label>
+                <label className="field"><span>Nível de ensino</span><select value={exam.level} onChange={(event) => updateExam("level", event.target.value)}><option value="">Selecione...</option><option>Educação Infantil</option><option>Ensino Fundamental I</option><option>Ensino Fundamental II</option><option>Ensino Médio</option></select></label>
                 <Field label="Disciplina" value={exam.subject} onChange={(value) => updateExam("subject", value)} placeholder="Ex.: Ciências" />
                 <Field label="Nome do professor(a)" value={exam.teacher} onChange={(value) => updateExam("teacher", value)} placeholder="Ex.: Prof.ª Marina" />
               </div>
               <div className="field-grid three-columns">
-                <label className="field"><span>Bimestre</span><select value={exam.bimester} onChange={(event) => updateExam("bimester", event.target.value)}><option>1º bimestre</option><option>2º bimestre</option><option>3º bimestre</option><option>4º bimestre</option></select></label>
+                <label className="field"><span>Bimestre</span><select value={exam.bimester} onChange={(event) => updateExam("bimester", event.target.value)}><option value="">Selecione...</option><option>1º bimestre</option><option>2º bimestre</option><option>3º bimestre</option><option>4º bimestre</option></select></label>
                 <Field label="Turma" value={exam.className} onChange={(value) => updateExam("className", value)} placeholder="8º A" />
-                <label className="field"><span>Turno</span><select value={exam.shift} onChange={(event) => updateExam("shift", event.target.value)}><option>Manhã</option><option>Tarde</option><option>Noite</option><option>Integral</option></select></label>
+                <label className="field"><span>Turno</span><select value={exam.shift} onChange={(event) => updateExam("shift", event.target.value)}><option value="">Selecione...</option><option>Manhã</option><option>Tarde</option><option>Noite</option><option>Integral</option></select></label>
               </div>
               <div className="field-grid three-columns date-fields">
                 <Field label="Dia" value={exam.dateDay} onChange={(value) => updateExam("dateDay", value)} placeholder="____" />
@@ -458,10 +485,13 @@ export default function Home() {
                     </div>
                     <div className="question-card-body">
                       <div className="question-controls">
-                        <label className="field"><span>Tipo de questão</span><select value={question.type} onChange={(event) => updateQuestion(question.id, { type: event.target.value as QuestionType })}><option value="discursiva">Discursiva</option><option value="multipla">Múltipla escolha</option></select></label>
-                        <Field label="Valor" value={question.points} onChange={(value) => updateQuestion(question.id, { points: value })} placeholder="1,0" />
+                        <label className="field"><span>Tipo de questão</span><select value={question.type} onChange={(event) => updateQuestion(question.id, { type: event.target.value as QuestionType })}><option value="discursiva">Discursiva</option><option value="multipla">Múltipla escolha</option><option value="jogo">Atividade / jogo</option></select></label>
+                        <Field label="Valor (opcional)" value={question.points} onChange={(value) => updateQuestion(question.id, { points: value })} placeholder="—" />
                       </div>
-                      <label className="field"><span>Enunciado</span><textarea rows={3} value={question.prompt} placeholder="Digite o enunciado da questão..." onChange={(event) => updateQuestion(question.id, { prompt: event.target.value })} /></label>
+                      {question.type === "jogo" && <label className="field game-kind-field"><span>Tipo de atividade</span><select value={question.gameKind || "Caça-palavras"} onChange={(event) => updateQuestion(question.id, { gameKind: event.target.value })}><option>Caça-palavras</option><option>Cruzadinha</option><option>Palavras embaralhadas</option><option>Jogo da memória</option><option>Outra atividade</option></select></label>}
+                      <div className="field"><span>Enunciado</span><RichTextField value={question.prompt} onChange={(value) => updateQuestion(question.id, { prompt: value })} placeholder="Digite o enunciado da questão..." /></div>
+                      <div className="question-media-row"><label className="image-question-button"><ImagePlus size={15} /> {question.image ? "Trocar imagem" : "Inserir imagem"}<input type="file" accept="image/png,image/jpeg,image/webp" onChange={(event) => handleQuestionImage(question.id, event.target.files?.[0])} /></label>{question.image && <button type="button" className="remove-image-button" onClick={() => updateQuestion(question.id, { image: "" })}><X size={13} /> Remover</button>}</div>
+                      {question.image && <img className="editor-question-image" src={question.image} alt="Prévia da imagem da questão" />}
                       {question.type === "multipla" && <div className="options-editor"><div className="field-label">Alternativas</div>{question.options.map((option, optionIndex) => <div className="option-row" key={optionIndex}><span>{String.fromCharCode(65 + optionIndex)}</span><input value={option} placeholder={`Alternativa ${String.fromCharCode(65 + optionIndex)}`} onChange={(event) => updateOption(question.id, optionIndex, event.target.value)} /></div>)}</div>}
                     </div>
                   </article>
@@ -473,8 +503,11 @@ export default function Home() {
             <section className="editor-section" id="visual">
               <SectionHeader number="03" eyebrow="ACABAMENTO" title="Um toque final" description="Pequenos detalhes que deixam sua avaliação pronta para imprimir." />
               <Field label="Título da avaliação" value={exam.title} onChange={(value) => updateExam("title", value)} placeholder="Ex.: AVALIAÇÃO DO 3º BIMESTRE" />
-              <label className="field"><span>Instruções para a turma</span><textarea rows={2} value={exam.instructions} onChange={(event) => updateExam("instructions", event.target.value)} placeholder="Ex.: Leia cada questão com atenção..." /></label>
-              <div className="tip-card"><Sparkles size={18} /><div><strong>Feita para caber melhor</strong><p>A prévia usa duas colunas depois do título para economizar papel sem perder espaço para respostas.</p></div></div>
+              <div className="field rich-field-wrap"><span>Avisos, textos ou conteúdo complementar</span><RichTextField value={exam.notice} onChange={(value) => updateExam("notice", value)} placeholder="Digite aqui um texto, aviso, texto-base ou instruções..." /></div>
+              <div className="field rich-field-wrap"><span>Instruções para a turma</span><RichTextField value={exam.instructions} onChange={(value) => updateExam("instructions", value)} placeholder="Ex.: Leia cada questão com atenção..." /></div>
+              <div className="field-grid two-columns"><label className="field"><span>Fonte da prova</span><select value={exam.fontFamily} onChange={(event) => updateExam("fontFamily", event.target.value as ExamData["fontFamily"])}><option>Arial</option><option>Times New Roman</option></select></label><label className="field"><span>Tamanho da fonte</span><select value={exam.fontSize} onChange={(event) => updateExam("fontSize", event.target.value)}>{["8", "9", "10", "11", "12", "13", "14", "15", "16"].map((size) => <option key={size} value={size}>{size} pt</option>)}</select></label></div>
+              <div className="paper-mode-control"><span>Distribuição da folha</span><div><button className={pageMode === "single" ? "selected" : ""} onClick={() => setPageMode("single")}>1 lado · uma coluna</button><button className={pageMode === "double" ? "selected" : ""} onClick={() => setPageMode("double")}>2 lados · duas colunas</button></div></div>
+              <div className="tip-card"><Sparkles size={18} /><div><strong>Atividades diferentes também cabem aqui</strong><p>Use o tipo “Atividade / jogo” para reservar um espaço para caça-palavras, cruzadinha ou outro material.</p></div></div>
               <button className="reset-button" onClick={resetDraft}><RotateCcw size={15} /> Restaurar modelo inicial</button>
             </section>
           </div>
@@ -490,17 +523,17 @@ export default function Home() {
             <div className="paper" id="paper-preview">
               <div className="paper-header-table">
                 <div className="paper-logo-cell">{logoPreview ? <img src={logoPreview} alt="Logo" /> : <div className="logo-placeholder">LOGO<br />DA ESCOLA</div>}</div>
-                <div className="paper-school-cell">{exam.schoolName || "Nome da escola"} – {exam.level || "Nível de ensino"}</div>
+                <div className="paper-school-cell">{exam.schoolName}{exam.schoolName && exam.level ? ` – ${exam.level}` : exam.level}</div>
                 <div className="paper-info-row"><span><b>DISCIPLINA:</b> {exam.subject || "________________"}</span><span><b>PROFESSOR(A):</b> {exam.teacher || "________________"}</span><span><b>BIMESTRE:</b> {exam.bimester || "____"}</span></div>
                 <div className="paper-info-row"><span><b>ALUNO(A):</b> {exam.student || ""}</span><span><b>ANO:</b> {exam.className || "____"}</span><span><b>TURMA:</b> __________</span><span><b>TURNO:</b> {exam.shift || "____"}</span><span><b>DATA:</b> {exam.dateDay || "____"}/{exam.dateMonth || "____"}/2026</span></div>
               </div>
-              <div className="paper-title-block"><h1>{exam.title || "Título da avaliação"}</h1><p>{exam.instructions || "Leia cada questão com atenção e responda com clareza."}</p></div>
+              <div className="paper-title-block" style={{ fontFamily: exam.fontFamily, fontSize: `${exam.fontSize}px` }}><h1>{exam.title || "AVALIAÇÃO"}</h1>{exam.notice && <div className="paper-notice" dangerouslySetInnerHTML={{ __html: exam.notice }} />}{exam.instructions && <p dangerouslySetInnerHTML={{ __html: exam.instructions }} />}</div>
               <div className="student-fields"><div><span>Aluno(a)</span><strong>{exam.student || ""}</strong></div><div><span>Professor(a)</span><strong>{exam.teacher || ""}</strong></div><div className="small-field"><span>Data</span><strong>{exam.dateDay || "____"} / {exam.dateMonth || "____"}</strong></div><div className="small-field"><span>Turno</span><strong>{exam.shift || "____"}</strong></div></div>
-              <div className="paper-columns">{questions.map((question, index) => <QuestionPreview question={question} index={index} key={question.id} />)}</div>
+              <div className={`paper-columns ${pageMode === "single" ? "single-column" : ""}`} style={{ fontFamily: exam.fontFamily, fontSize: `${exam.fontSize}px` }}>{questions.map((question, index) => <QuestionPreview question={question} index={index} key={question.id} />)}</div>
               <div className="paper-footer"><span>prova pronta</span><span>{questions.length} questão{questions.length === 1 ? "" : "ões"} <b>·</b> boa prova!</span></div>
             </div>
           </div>
-          <div className="preview-note"><Check size={15} /><span>Formato A4 · margens seguras · divisão em duas colunas após o título</span><ChevronDown size={15} /></div>
+          <div className="preview-note"><Check size={15} /><span>Formato A4 · {pageMode === "single" ? "uma coluna" : "duas colunas"} · fonte {exam.fontFamily}, {exam.fontSize} pt</span><ChevronDown size={15} /></div>
         </section>
       </main>
     </div>
