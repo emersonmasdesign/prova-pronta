@@ -110,7 +110,11 @@ button:disabled { cursor: not-allowed; opacity: .45; }
 .option-row { display: flex; align-items: center; gap: 6px; margin-top: 5px; }
 .option-row > span { width: 18px; height: 18px; display: grid; place-items: center; color: var(--blue); background: #eef2f4; border-radius: 50%; font-size: 9px; font-weight: 700; }
 .option-row input { padding: 7px 9px; }
-.question-media-row { display: flex; align-items: center; gap: 9px; margin-top: 10px; }
+.question-media-row { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+.image-size-control { display: flex; align-items: center; gap: 8px; margin-top: 9px; color: #66737a; font-size: 10px; }
+.image-size-control span { font-weight: 700; white-space: nowrap; }
+.image-size-control input { flex: 1; accent-color: var(--blue); }
+.image-size-control strong { min-width: 34px; color: var(--blue); font-size: 10px; text-align: right; }
 .image-question-button { display: inline-flex; align-items: center; gap: 5px; color: var(--blue); font-size: 10px; font-weight: 700; cursor: pointer; }
 .image-question-button input { display: none; }
 .remove-image-button { display: inline-flex; align-items: center; gap: 4px; padding: 0; color: #7c878c; background: transparent; font-size: 10px; }
