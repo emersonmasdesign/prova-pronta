@@ -92,7 +92,7 @@ const initialExam: ExamData = {
   notice: "",
   instructions: "",
   fontFamily: "Arial",
-  fontSize: "10",
+  fontSize: "12",
   antiCheat: false,
   variationCount: "1",
   shuffleDiscursive: false,
@@ -113,7 +113,7 @@ function seededShuffle<T>(items: T[], seed: number) {
   return output;
 }
 
-const STORAGE_KEY = "prova-pronta-draft-v3";
+const STORAGE_KEY = "prova-pronta-draft-v4";
 
 function nextQuestionId(questions: Question[]) {
   return questions.length ? Math.max(...questions.map((question) => question.id)) + 1 : 1;
@@ -605,9 +605,10 @@ export default function Home() {
             <div className="paper" id="paper-preview">
               <div className="paper-header-table">
                 <div className="paper-logo-cell">{logoPreview ? <img src={logoPreview} alt="Logo" /> : <div className="logo-placeholder">LOGO<br />DA ESCOLA</div>}</div>
-                <div className="paper-school-cell">{exam.schoolName}{exam.schoolName && exam.level ? ` – ${exam.level}` : exam.level}</div>
-                <div className="paper-info-row"><span><b>DISCIPLINA:</b> {exam.subject || "________________"}</span><span><b>PROFESSOR(A):</b> {exam.teacher || "________________"}</span><span><b>BIMESTRE:</b> {exam.bimester || "____"}</span></div>
-                <div className="paper-info-row"><span><b>ALUNO(A):</b> {exam.student || ""}</span><span><b>ANO:</b> {exam.className || "____"}</span><span><b>TURMA:</b> __________</span><span><b>TURNO:</b> {exam.shift || "____"}</span><span><b>DATA:</b> {exam.dateDay || "____"}/{exam.dateMonth || "____"}/2026</span></div>
+                <div className="paper-school-cell">{exam.schoolName}{exam.schoolName && exam.level ? ` – ${exam.level.toUpperCase()}` : exam.level.toUpperCase()}</div>
+                <div className="paper-info-row"><span><b>DISCIPLINA:</b> {exam.subject || "________________"}</span><span><b>PROFESSOR(A):</b> {exam.teacher || "________________"}</span><span><b>BIMESTRE:</b> {exam.bimester ? exam.bimester.toUpperCase() : "____"}</span></div>
+                <div className="paper-student-row"><span><b>ALUNO(A):</b> {exam.student || "____________________________________________________________"}</span></div>
+                <div className="paper-info-row"><span><b>ANO:</b> {exam.className || "____"}</span><span><b>TURMA:</b> __________</span><span><b>TURNO:</b> {exam.shift || "____"}</span><span><b>DATA:</b> {exam.dateDay || "____"}/{exam.dateMonth || "____"}/2026</span></div>
               </div>
               <div className="paper-title-block" style={{ fontFamily: exam.fontFamily, fontSize: `${exam.fontSize}px` }}><h1>{exam.title || "AVALIAÇÃO"}</h1>{exam.notice && <div className="paper-notice" dangerouslySetInnerHTML={{ __html: exam.notice }} />}{exam.instructions && <p dangerouslySetInnerHTML={{ __html: exam.instructions }} />}</div>
               <div className="student-fields"><div><span>Aluno(a)</span><strong>{exam.student || ""}</strong></div><div><span>Professor(a)</span><strong>{exam.teacher || ""}</strong></div><div className="small-field"><span>Data</span><strong>{exam.dateDay || "____"} / {exam.dateMonth || "____"}</strong></div><div className="small-field"><span>Turno</span><strong>{exam.shift || "____"}</strong></div></div>
