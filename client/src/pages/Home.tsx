@@ -198,9 +198,9 @@ function QuestionPreview({ question, index }: { question: Question; index: numbe
         <span dangerouslySetInnerHTML={{ __html: question.prompt || "" }} />
         {question.points && <em>({question.points} pt)</em>}
       </div>
-      {question.secondaryPrompt && <div className="question-secondary" dangerouslySetInnerHTML={{ __html: question.secondaryPrompt }} />}
       {question.image && <img className="question-image" src={question.image} alt="Imagem da questão" />}
       {question.image && question.imageCaption && <div className="question-caption">{question.imageCaption}</div>}
+      {question.secondaryPrompt && <div className="question-secondary" dangerouslySetInnerHTML={{ __html: question.secondaryPrompt }} />}
       {question.type === "jogo" ? (
         <div className="game-placeholder">{question.gameKind || "Atividade lúdica"}<span>Insira ou desenhe o material da atividade aqui.</span></div>
       ) : question.type === "multipla" ? (
@@ -246,14 +246,14 @@ async function examToParagraphs(question: Question, index: number) {
     children: [new TextRun({ text: question.imageCaption, italics: true, color: "68717D", size: 16 })],
   }) : null;
   if (question.type === "multipla") {
-    return [prompt, ...(secondaryPrompt ? [secondaryPrompt] : []), ...(imageParagraph ? [imageParagraph] : []), ...(imageCaption ? [imageCaption] : []), ...question.options.map((option, optionIndex) => new Paragraph({
+    return [prompt, ...(imageParagraph ? [imageParagraph] : []), ...(imageCaption ? [imageCaption] : []), ...(secondaryPrompt ? [secondaryPrompt] : []), ...question.options.map((option, optionIndex) => new Paragraph({
       indent: { left: 340 },
       spacing: { after: 40 },
       children: [new TextRun({ text: `${String.fromCharCode(65 + optionIndex)}) `, bold: true }), new TextRun(option || "Alternativa")],
     }))];
   }
-  if (question.type === "jogo") return [prompt, ...(secondaryPrompt ? [secondaryPrompt] : []), ...(imageParagraph ? [imageParagraph] : []), ...(imageCaption ? [imageCaption] : []), new Paragraph({ children: [new TextRun({ text: `${question.gameKind || "Atividade lúdica"}: espaço reservado para a atividade.`, italics: true })] })];
-  return [prompt, ...(secondaryPrompt ? [secondaryPrompt] : []), ...(imageParagraph ? [imageParagraph] : []), ...(imageCaption ? [imageCaption] : []), ...[1, 2, 3].map(() => new Paragraph({
+  if (question.type === "jogo") return [prompt, ...(imageParagraph ? [imageParagraph] : []), ...(imageCaption ? [imageCaption] : []), ...(secondaryPrompt ? [secondaryPrompt] : []), new Paragraph({ children: [new TextRun({ text: `${question.gameKind || "Atividade lúdica"}: espaço reservado para a atividade.`, italics: true })] })];
+  return [prompt, ...(imageParagraph ? [imageParagraph] : []), ...(imageCaption ? [imageCaption] : []), ...(secondaryPrompt ? [secondaryPrompt] : []), ...[1, 2, 3].map(() => new Paragraph({
     spacing: { after: 220 },
     border: { bottom: { color: "AAB4BF", style: BorderStyle.SINGLE, size: 4 } },
     children: [new TextRun(" ")],
@@ -576,7 +576,7 @@ export default function Home() {
                       </div>
                       {question.type === "jogo" && <label className="field game-kind-field"><span>Tipo de atividade</span><select value={question.gameKind || "Caça-palavras"} onChange={(event) => updateQuestion(question.id, { gameKind: event.target.value })}><option>Caça-palavras</option><option>Cruzadinha</option><option>Palavras embaralhadas</option><option>Jogo da memória</option><option>Outra atividade</option></select></label>}
                       <div className="field"><span>Enunciado</span><RichTextField value={question.prompt} onChange={(value) => updateQuestion(question.id, { prompt: value })} placeholder="Digite o enunciado da questão..." /></div>
-                      <div className="field"><span>Segundo enunciado (opcional)</span><RichTextField value={question.secondaryPrompt || ""} onChange={(value) => updateQuestion(question.id, { secondaryPrompt: value })} placeholder="Acrescente uma informação complementar, se necessário..." /></div>
+                      <div className="field"><span>Continuação do enunciado principal ou novo enunciado (opcional)</span><RichTextField value={question.secondaryPrompt || ""} onChange={(value) => updateQuestion(question.id, { secondaryPrompt: value })} placeholder="Digite a continuação do enunciado principal ou um novo enunciado..." /></div>
                       <div className="question-media-row"><label className="image-question-button"><ImagePlus size={15} /> {question.image ? "Trocar imagem" : "Inserir imagem"}<input type="file" accept="image/png,image/jpeg,image/webp" onChange={(event) => handleQuestionImage(question.id, event.target.files?.[0])} /></label>{question.image && <button type="button" className="remove-image-button" onClick={() => updateQuestion(question.id, { image: "" })}><X size={13} /> Remover</button>}</div>
                       {question.image && <Field label="Legenda da imagem (opcional)" value={question.imageCaption || ""} onChange={(value) => updateQuestion(question.id, { imageCaption: value })} placeholder="Fonte, autor ou informação complementar" />}
                       {question.image && <img className="editor-question-image" src={question.image} alt="Prévia da imagem da questão" />}
