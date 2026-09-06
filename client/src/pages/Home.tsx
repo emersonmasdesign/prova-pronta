@@ -395,9 +395,9 @@ export default function Home() {
     const paragraphs = variants.map((variant) => [
       new Paragraph({ heading: HeadingLevel.HEADING_2, children: [new TextRun({ text: `TIPO ${variant.number}`, bold: true })] }),
       ...variant.questions.filter((question) => question.type === "multipla").map((question) => {
-        const originalIndex = questions.findIndex((item) => item.id === question.id);
+        const variantIndex = variant.questions.findIndex((item) => item.id === question.id);
         const answer = question.correctOption === undefined || question.correctOption === null ? "não informado" : String.fromCharCode(65 + question.correctOption);
-        return new Paragraph({ children: [new TextRun({ text: `${originalIndex + 1}. ${answer}`, bold: true }), new TextRun({ text: question.points ? ` — ${question.points} ponto(s)` : "" })] });
+        return new Paragraph({ children: [new TextRun({ text: `${variantIndex + 1}. ${answer}`, bold: true }), new TextRun({ text: question.points ? ` — ${question.points} ponto(s)` : "" })] });
       }),
       new Paragraph({ children: [new TextRun({ text: " " })] }),
     ]).flat();
@@ -614,7 +614,7 @@ export default function Home() {
               <div className={`paper-columns ${pageMode === "single" ? "single-column" : ""}`} style={{ fontFamily: exam.fontFamily, fontSize: `${exam.fontSize}px` }}>{previewQuestions.map((question, index) => <QuestionPreview question={question} index={index} key={question.id} />)}</div>
               <div className="paper-footer"><span>TIPO {activeVariant}</span><span>{previewQuestions.length} questão{previewQuestions.length === 1 ? "" : "ões"}</span></div>
             </div>
-            <div className="answer-key-print"><h1>GABARITO</h1><h2>{exam.title || "AVALIAÇÃO"}</h2>{variants.map((variant) => <section key={variant.number}><h3>TIPO {variant.number}</h3>{variant.questions.filter((question) => question.type === "multipla").map((question) => <p key={question.id}>{questions.findIndex((item) => item.id === question.id) + 1}. <strong>{question.correctOption === undefined || question.correctOption === null ? "não informado" : String.fromCharCode(65 + question.correctOption)}</strong></p>)}</section>)}</div>
+            <div className="answer-key-print"><h1>GABARITO</h1><h2>{exam.title || "AVALIAÇÃO"}</h2>{variants.map((variant) => <section key={variant.number}><h3>TIPO {variant.number}</h3>{variant.questions.filter((question) => question.type === "multipla").map((question) => <p key={question.id}>{variant.questions.findIndex((item) => item.id === question.id) + 1}. <strong>{question.correctOption === undefined || question.correctOption === null ? "não informado" : String.fromCharCode(65 + question.correctOption)}</strong></p>)}</section>)}</div>
           </div>
           <div className="preview-note"><Check size={15} /><span>Formato A4 · {pageMode === "single" ? "uma coluna" : "duas colunas"} · fonte {exam.fontFamily}, {exam.fontSize} pt</span><ChevronDown size={15} /></div>
         </section>
