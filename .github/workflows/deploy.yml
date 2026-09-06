@@ -32,10 +32,6 @@ jobs:
         run: pnpm install --frozen-lockfile
       - name: Gerar build
         run: pnpm build
-      - name: Configurar GitHub Pages
-        uses: actions/configure-pages@v5
-        with:
-          enablement: true
       - name: Fazer upload do site
         uses: actions/upload-pages-artifact@v3
         with:
