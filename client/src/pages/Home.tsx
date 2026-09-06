@@ -337,7 +337,7 @@ export default function Home() {
   }, [exam.antiCheat, exam.variationCount, exam.shuffleDiscursive, questions]);
 
   const previewQuestions = variants[activeVariant - 1]?.questions || questions;
-  const questionsPerPage = pageMode === "single" ? 4 : 8;
+  const questionsPerPage = pageMode === "single" ? 2 : 4;
   const previewQuestionPages = useMemo(() => Array.from({ length: Math.max(1, Math.ceil(previewQuestions.length / questionsPerPage)) }, (_, index) => previewQuestions.slice(index * questionsPerPage, (index + 1) * questionsPerPage)), [previewQuestions, questionsPerPage]);
   useEffect(() => {
     if (activeVariant > variants.length) setActiveVariant(1);
@@ -665,7 +665,7 @@ export default function Home() {
             </div>
             <div className="answer-key-print"><h1>GABARITO</h1><h2>{exam.title || "AVALIAÇÃO"}</h2>{variants.map((variant) => <section key={variant.number}><h3>TIPO {variant.number}</h3>{variant.questions.filter((question) => question.type === "multipla").map((question) => <p key={question.id}>{variant.questions.findIndex((item) => item.id === question.id) + 1}. <strong>{question.correctOption === undefined || question.correctOption === null ? "não informado" : String.fromCharCode(65 + question.correctOption)}</strong></p>)}</section>)}</div>
           </div>
-          <div className="preview-note"><Check size={15} /><span>Formato A4 · {pageMode === "single" ? "uma coluna" : "duas colunas"} · fonte {exam.fontFamily}, {exam.fontSize} pt</span><ChevronDown size={15} /></div>
+          <div className="preview-note"><Check size={15} /><span>Formato A4 · {pageMode === "single" ? "uma coluna" : "duas colunas"} · {previewQuestionPages.length + (exam.extraActivity ? 1 : 0)} página{previewQuestionPages.length + (exam.extraActivity ? 1 : 0) === 1 ? "" : "s"} na prévia{exam.antiCheat && variants.length > 1 ? ` · PDF com ${variants.length} tipos` : ""} · fonte {exam.fontFamily}, {exam.fontSize} pt</span><ChevronDown size={15} /></div>
         </section>
       </main>
     </div>
