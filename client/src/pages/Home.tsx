@@ -18,6 +18,9 @@ import {
   RotateCcw,
   Save,
   Settings2,
+  ShieldCheck,
+  KeyRound,
+  Shuffle,
   Sparkles,
   Trash2,
   Upload,
@@ -49,6 +52,7 @@ type Question = {
   options: string[];
   image?: string;
   gameKind?: string;
+  correctOption?: number | null;
 };
 
 type ExamData = {
@@ -67,6 +71,9 @@ type ExamData = {
   instructions: string;
   fontFamily: "Arial" | "Times New Roman";
   fontSize: string;
+  antiCheat: boolean;
+  variationCount: string;
+  shuffleDiscursive: boolean;
   logo?: string;
 };
 
@@ -86,9 +93,25 @@ const initialExam: ExamData = {
   instructions: "",
   fontFamily: "Arial",
   fontSize: "10",
+  antiCheat: false,
+  variationCount: "1",
+  shuffleDiscursive: false,
 };
 
 const initialQuestions: Question[] = [{ id: 1, type: "discursiva", prompt: "", points: "", options: ["", "", "", ""] }];
+
+type Variant = { number: number; questions: Question[] };
+
+function seededShuffle<T>(items: T[], seed: number) {
+  const output = [...items];
+  let value = seed * 9301 + 49297;
+  for (let index = output.length - 1; index > 0; index -= 1) {
+    value = (value * 233280 + 12345) % 2147483647;
+    const target = Math.floor((value / 2147483647) * (index + 1));
+    [output[index], output[target]] = [output[target], output[index]];
+  }
+  return output;
+}
 
 const STORAGE_KEY = "prova-pronta-draft-v3";
 
@@ -245,12 +268,32 @@ export default function Home() {
   const [saved, setSaved] = useState(true);
   const [logoPreview, setLogoPreview] = useState(exam.logo || "");
   const [pageMode, setPageMode] = useState<"single" | "double">("double");
+  const [activeVariant, setActiveVariant] = useState(1);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const updateExam = (key: keyof ExamData, value: string) => {
+  const updateExam = (key: keyof ExamData, value: string | boolean) => {
     setExam((current) => ({ ...current, [key]: value }));
     setSaved(false);
   };
+
+  const variants = useMemo<Variant[]>(() => {
+    const count = exam.antiCheat ? Math.min(4, Math.max(1, Number(exam.variationCount) || 1)) : 1;
+    return Array.from({ length: count }, (_, index) => {
+      const multiple = questions.filter((question) => question.type === "multipla");
+      const other = questions.filter((question) => question.type !== "multipla");
+      const shuffledMultiple = exam.antiCheat ? seededShuffle(multiple, index + 11).map((question) => {
+        const optionOrder = seededShuffle(question.options.map((_, optionIndex) => optionIndex), index * 97 + question.id * 13);
+        return { ...question, options: optionOrder.map((optionIndex) => question.options[optionIndex]), correctOption: question.correctOption === undefined || question.correctOption === null ? question.correctOption : optionOrder.indexOf(question.correctOption) };
+      }) : multiple;
+      const shuffledOther = exam.antiCheat && exam.shuffleDiscursive ? seededShuffle(other, index + 71) : other;
+      return { number: index + 1, questions: exam.antiCheat ? [...shuffledMultiple, ...shuffledOther] : questions };
+    });
+  }, [exam.antiCheat, exam.variationCount, exam.shuffleDiscursive, questions]);
+
+  const previewQuestions = variants[activeVariant - 1]?.questions || questions;
+  useEffect(() => {
+    if (activeVariant > variants.length) setActiveVariant(1);
+  }, [activeVariant, variants.length]);
 
   const updateQuestion = (id: number, patch: Partial<Question>) => {
     setQuestions((current) => current.map((question) => (question.id === id ? { ...question, ...patch } : question)));
@@ -340,6 +383,35 @@ export default function Home() {
     }, 50);
   };
 
+  const printAnswerKey = () => {
+    document.body.classList.add("printing-answer-key");
+    window.setTimeout(() => {
+      window.print();
+      window.setTimeout(() => document.body.classList.remove("printing-answer-key"), 400);
+    }, 50);
+  };
+
+  const downloadAnswerKey = async () => {
+    const paragraphs = variants.map((variant) => [
+      new Paragraph({ heading: HeadingLevel.HEADING_2, children: [new TextRun({ text: `TIPO ${variant.number}`, bold: true })] }),
+      ...variant.questions.filter((question) => question.type === "multipla").map((question) => {
+        const originalIndex = questions.findIndex((item) => item.id === question.id);
+        const answer = question.correctOption === undefined || question.correctOption === null ? "não informado" : String.fromCharCode(65 + question.correctOption);
+        return new Paragraph({ children: [new TextRun({ text: `${originalIndex + 1}. ${answer}`, bold: true }), new TextRun({ text: question.points ? ` — ${question.points} ponto(s)` : "" })] });
+      }),
+      new Paragraph({ children: [new TextRun({ text: " " })] }),
+    ]).flat();
+    const doc = new Document({ sections: [{ children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: "GABARITO", bold: true, size: 28 })] }), new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: exam.title || "AVALIAÇÃO", size: 20 })] }), ...paragraphs] }] });
+    const blob = await Packer.toBlob(doc);
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "gabarito.docx";
+    link.click();
+    URL.revokeObjectURL(url);
+    toast.success("Gabarito DOCX baixado.");
+  };
+
   const exportDocx = async () => {
     const logoType = logoPreview.startsWith("data:image/jpeg") || logoPreview.startsWith("data:image/jpg") ? "jpg" : "png";
     const headerRows = [
@@ -367,7 +439,7 @@ export default function Home() {
         new TableRow({ children: [new TableCell({ columnSpan: 2, children: [new Paragraph({ children: [new TextRun({ text: `Aluno(a): ${exam.student || "________________________________________"}`, size: 18 }), new TextRun({ text: `    Turma: ${exam.className || "________"}`, size: 18 }), new TextRun({ text: `    Turno: ${exam.shift || "________"}`, size: 18 })] }), new Paragraph({ children: [new TextRun({ text: `Professor(a): ${exam.teacher || "____________________________"}`, size: 18 }), new TextRun({ text: `    ${exam.bimester || "Bimestre"}`, size: 18 }), new TextRun({ text: `    Data: ____ / ____`, size: 18 })] })] })] }),
       ],
     });
-    const paragraphs = (await Promise.all(questions.map(examToParagraphs))).flat();
+    const paragraphs = (await Promise.all(previewQuestions.map(examToParagraphs))).flat();
     const doc = new Document({
       sections: [{
         properties: { page: { margin: { top: 520, right: 520, bottom: 520, left: 520 } } },
@@ -379,7 +451,7 @@ export default function Home() {
             width: { size: 9200, type: WidthType.DXA },
             rows: [new TableRow({ children: pageMode === "single" ? [new TableCell({ width: { size: 9200, type: WidthType.DXA }, children: paragraphs })] : [new TableCell({ width: { size: 4600, type: WidthType.DXA }, children: paragraphs.filter((_, index) => index % 2 === 0) }), new TableCell({ width: { size: 4600, type: WidthType.DXA }, children: paragraphs.filter((_, index) => index % 2 === 1) })] })],
           }),
-          new Paragraph({ alignment: AlignmentType.RIGHT, spacing: { before: 200 }, children: [new TextRun({ text: `${questions.length} questão${questions.length === 1 ? "" : "ões"} · boa prova!`, italics: true, color: "68717D", size: 16 })] }),
+          new Paragraph({ alignment: AlignmentType.RIGHT, spacing: { before: 200 }, children: [new TextRun({ text: `TIPO ${activeVariant} · ${previewQuestions.length} questão${previewQuestions.length === 1 ? "" : "ões"}`, italics: true, color: "68717D", size: 16 })] }),
         ],
       }],
     });
@@ -396,6 +468,7 @@ export default function Home() {
   const sectionTabs = [
     { id: "identidade", label: "Identidade", icon: FileText },
     { id: "questoes", label: "Questões", icon: AlignJustify },
+    { id: "anticola", label: "Anti-cola", icon: ShieldCheck },
     { id: "visual", label: "Visual", icon: LayoutGrid },
   ];
 
@@ -492,7 +565,7 @@ export default function Home() {
                       <div className="field"><span>Enunciado</span><RichTextField value={question.prompt} onChange={(value) => updateQuestion(question.id, { prompt: value })} placeholder="Digite o enunciado da questão..." /></div>
                       <div className="question-media-row"><label className="image-question-button"><ImagePlus size={15} /> {question.image ? "Trocar imagem" : "Inserir imagem"}<input type="file" accept="image/png,image/jpeg,image/webp" onChange={(event) => handleQuestionImage(question.id, event.target.files?.[0])} /></label>{question.image && <button type="button" className="remove-image-button" onClick={() => updateQuestion(question.id, { image: "" })}><X size={13} /> Remover</button>}</div>
                       {question.image && <img className="editor-question-image" src={question.image} alt="Prévia da imagem da questão" />}
-                      {question.type === "multipla" && <div className="options-editor"><div className="field-label">Alternativas</div>{question.options.map((option, optionIndex) => <div className="option-row" key={optionIndex}><span>{String.fromCharCode(65 + optionIndex)}</span><input value={option} placeholder={`Alternativa ${String.fromCharCode(65 + optionIndex)}`} onChange={(event) => updateOption(question.id, optionIndex, event.target.value)} /></div>)}</div>}
+                      {question.type === "multipla" && <div className="options-editor"><div className="field-label">Alternativas</div>{question.options.map((option, optionIndex) => <div className="option-row" key={optionIndex}><span>{String.fromCharCode(65 + optionIndex)}</span><input value={option} placeholder={`Alternativa ${String.fromCharCode(65 + optionIndex)}`} onChange={(event) => updateOption(question.id, optionIndex, event.target.value)} /><button type="button" className={`correct-option ${question.correctOption === optionIndex ? "selected" : ""}`} title="Marcar alternativa correta" onClick={() => updateQuestion(question.id, { correctOption: question.correctOption === optionIndex ? null : optionIndex })}>{question.correctOption === optionIndex ? <Check size={12} /> : "✓"}</button></div>)}</div>}
                     </div>
                   </article>
                 ))}
@@ -500,8 +573,17 @@ export default function Home() {
               <button className="add-question" onClick={addQuestion} disabled={questions.length >= 10}><Plus size={17} /> Adicionar questão <span>{questions.length >= 10 ? "limite atingido" : `${10 - questions.length} restantes`}</span></button>
             </section>
 
+            <section className="editor-section" id="anticola">
+              <SectionHeader number="03" eyebrow="SEGURANÇA" title="Anti-cola" description="Crie versões diferentes da prova sem alterar o conteúdo das questões." />
+              <div className="anti-cheat-card">
+                <div className="anti-cheat-card-title"><div className="anti-cheat-icon"><ShieldCheck size={20} /></div><div><strong>Ativar anti-cola</strong><span>Embaralha questões de múltipla escolha e suas alternativas.</span></div><label className="switch"><input type="checkbox" checked={exam.antiCheat} onChange={(event) => updateExam("antiCheat", event.target.checked)} /><span /></label></div>
+                {exam.antiCheat && <div className="anti-cheat-settings"><label className="field"><span>Quantidade de tipos de prova</span><select value={exam.variationCount} onChange={(event) => { updateExam("variationCount", event.target.value); setActiveVariant(1); }}><option value="1">1 tipo</option><option value="2">2 tipos</option><option value="3">3 tipos</option><option value="4">4 tipos</option></select></label><label className="check-row"><input type="checkbox" checked={exam.shuffleDiscursive} onChange={(event) => updateExam("shuffleDiscursive", event.target.checked)} /><span>Também reorganizar a ordem das questões discursivas</span></label></div>}
+              </div>
+              <div className="variant-explanation"><KeyRound size={16} /><div><strong>Como funciona</strong><p>As questões objetivas e as alternativas são reorganizadas por tipo. Cada versão recebe um número e possui seu próprio gabarito.</p></div></div>
+            </section>
+
             <section className="editor-section" id="visual">
-              <SectionHeader number="03" eyebrow="ACABAMENTO" title="Um toque final" description="Pequenos detalhes que deixam sua avaliação pronta para imprimir." />
+              <SectionHeader number="04" eyebrow="ACABAMENTO" title="Um toque final" description="Pequenos detalhes que deixam sua avaliação pronta para imprimir." />
               <Field label="Título da avaliação" value={exam.title} onChange={(value) => updateExam("title", value)} placeholder="Ex.: AVALIAÇÃO DO 3º BIMESTRE" />
               <div className="field rich-field-wrap"><span>Avisos, textos ou conteúdo complementar</span><RichTextField value={exam.notice} onChange={(value) => updateExam("notice", value)} placeholder="Digite aqui um texto, aviso, texto-base ou instruções..." /></div>
               <div className="field rich-field-wrap"><span>Instruções para a turma</span><RichTextField value={exam.instructions} onChange={(value) => updateExam("instructions", value)} placeholder="Ex.: Leia cada questão com atenção..." /></div>
@@ -516,8 +598,8 @@ export default function Home() {
 
         <section className="preview-panel">
           <div className="preview-toolbar">
-            <div><div className="eyebrow">PRÉVIA DA FOLHA</div><h2>Veja antes de baixar</h2></div>
-            <div className="preview-actions"><button className="secondary-button" onClick={exportPdf}><Printer size={16} /> Exportar PDF</button><button className="primary-button" onClick={exportDocx}><FileDown size={16} /> Baixar DOCX</button></div>
+            <div><div className="eyebrow">PRÉVIA DA FOLHA</div><h2>Veja antes de baixar</h2><div className="variant-picker"><Shuffle size={13} /> {variants.map((variant) => <button key={variant.number} className={activeVariant === variant.number ? "selected" : ""} onClick={() => setActiveVariant(variant.number)}>Tipo {variant.number}</button>)}</div></div>
+            <div className="preview-actions"><button className="secondary-button" onClick={exportPdf}><Printer size={16} /> Exportar PDF</button><button className="primary-button" onClick={exportDocx}><FileDown size={16} /> Baixar DOCX</button><button className="key-button" onClick={downloadAnswerKey}><KeyRound size={16} /> Gabarito DOCX</button><button className="key-button" onClick={printAnswerKey}><Printer size={16} /> Gabarito PDF</button></div>
           </div>
           <div className="preview-stage">
             <div className="paper" id="paper-preview">
@@ -529,9 +611,10 @@ export default function Home() {
               </div>
               <div className="paper-title-block" style={{ fontFamily: exam.fontFamily, fontSize: `${exam.fontSize}px` }}><h1>{exam.title || "AVALIAÇÃO"}</h1>{exam.notice && <div className="paper-notice" dangerouslySetInnerHTML={{ __html: exam.notice }} />}{exam.instructions && <p dangerouslySetInnerHTML={{ __html: exam.instructions }} />}</div>
               <div className="student-fields"><div><span>Aluno(a)</span><strong>{exam.student || ""}</strong></div><div><span>Professor(a)</span><strong>{exam.teacher || ""}</strong></div><div className="small-field"><span>Data</span><strong>{exam.dateDay || "____"} / {exam.dateMonth || "____"}</strong></div><div className="small-field"><span>Turno</span><strong>{exam.shift || "____"}</strong></div></div>
-              <div className={`paper-columns ${pageMode === "single" ? "single-column" : ""}`} style={{ fontFamily: exam.fontFamily, fontSize: `${exam.fontSize}px` }}>{questions.map((question, index) => <QuestionPreview question={question} index={index} key={question.id} />)}</div>
-              <div className="paper-footer"><span>prova pronta</span><span>{questions.length} questão{questions.length === 1 ? "" : "ões"} <b>·</b> boa prova!</span></div>
+              <div className={`paper-columns ${pageMode === "single" ? "single-column" : ""}`} style={{ fontFamily: exam.fontFamily, fontSize: `${exam.fontSize}px` }}>{previewQuestions.map((question, index) => <QuestionPreview question={question} index={index} key={question.id} />)}</div>
+              <div className="paper-footer"><span>TIPO {activeVariant}</span><span>{previewQuestions.length} questão{previewQuestions.length === 1 ? "" : "ões"}</span></div>
             </div>
+            <div className="answer-key-print"><h1>GABARITO</h1><h2>{exam.title || "AVALIAÇÃO"}</h2>{variants.map((variant) => <section key={variant.number}><h3>TIPO {variant.number}</h3>{variant.questions.filter((question) => question.type === "multipla").map((question) => <p key={question.id}>{questions.findIndex((item) => item.id === question.id) + 1}. <strong>{question.correctOption === undefined || question.correctOption === null ? "não informado" : String.fromCharCode(65 + question.correctOption)}</strong></p>)}</section>)}</div>
           </div>
           <div className="preview-note"><Check size={15} /><span>Formato A4 · {pageMode === "single" ? "uma coluna" : "duas colunas"} · fonte {exam.fontFamily}, {exam.fontSize} pt</span><ChevronDown size={15} /></div>
         </section>
