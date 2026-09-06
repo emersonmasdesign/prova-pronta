@@ -232,8 +232,8 @@ function QuestionPreview({ question, index }: { question: Question; index: numbe
 
 function PaperPage({ exam, logoPreview, pageMode, variantNumber, questions, startIndex, extraActivity, extraActivityLayout, pageNumber, pageCount }: { exam: ExamData; logoPreview: string; pageMode: "single" | "double"; variantNumber: number; questions: Question[]; startIndex: number; extraActivity?: string; extraActivityLayout?: "none" | "single" | "double"; pageNumber: number; pageCount: number }) {
   const isExtra = Boolean(extraActivity);
-  return <div className="paper">
-    {!isExtra && <div className="paper-header-table">
+  return <div className={`paper ${pageNumber > 1 ? "paper-continuation" : ""}`}>
+    {!isExtra && pageNumber === 1 && <div className="paper-header-table">
       <div className="paper-logo-cell">{logoPreview ? <img src={logoPreview} alt="Logo" /> : <div className="logo-placeholder">LOGO<br />DA ESCOLA</div>}</div>
       <div className="paper-school-cell">{exam.schoolName}{exam.schoolName && exam.level ? ` – ${exam.level.toUpperCase()}` : exam.level.toUpperCase()}</div>
       <div className="paper-info-row"><span><b>DISCIPLINA:</b> {exam.subject || "________________"}</span><span><b>PROFESSOR(A):</b> {exam.teacher || "________________"}</span><span><b>BIMESTRE:</b> {exam.bimester ? exam.bimester.toUpperCase() : "____"}</span></div>

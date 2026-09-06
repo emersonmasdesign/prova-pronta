@@ -215,7 +215,7 @@ button:disabled { cursor: not-allowed; opacity: .45; }
 .question-caption { margin: 3px 0 0; color: #68717D; font-size: 8px; font-style: italic; line-height: 1.25; text-align: center; }
 .game-placeholder { min-height: 105px; margin: 9px 0 0 17px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; border: 1px dashed #777; color: #333; font-size: 10px; text-align: center; }
 .game-placeholder span { color: #777; font-size: 8px; }
-.paper-footer { position: absolute !important; right: 54px; bottom: 22px; left: 54px; display: flex; justify-content: space-between; color: #666; font: 9px Arial, sans-serif; }
+.paper-footer { position: absolute !important; right: 54px; bottom: 22px; left: 54px; z-index: 5; display: flex; justify-content: space-between; padding-top: 5px; color: #666; background: var(--paper); border-top: 1px solid #d8d8d8; font: 9px Arial, sans-serif; }
 .paper-footer span:first-child { color: #666; }
 .preview-note { justify-content: center; gap: 6px; padding: 9px; color: #77838a; background: #f8f9f9; border-top: 1px solid #d5dee1; font-size: 9px; }
 .answer-key-print { display: none; }
@@ -261,7 +261,7 @@ button:disabled { cursor: not-allowed; opacity: .45; }
   body.printing-exam .print-variant { display: block !important; }
   body.printing-exam .paper { width: 210mm; height: 297mm; min-height: 0; margin: 0; transform: none; border: 0; box-shadow: none; padding: 15mm 16mm 14mm; break-after: page; page-break-after: always; }
   body.printing-exam .paper:last-child { break-after: auto; page-break-after: auto; }
-  body.printing-exam .paper-footer { left: 16mm; right: 16mm; bottom: 9mm; }
+  body.printing-exam .paper-footer { left: 16mm; right: 16mm; bottom: 9mm; padding-top: 2mm; background: white; border-top: 0.2mm solid #d8d8d8; }
   body.printing-answer-key * { visibility: hidden !important; }
   body.printing-answer-key .answer-key-print, body.printing-answer-key .answer-key-print * { visibility: visible !important; }
   body.printing-answer-key .answer-key-print { display: block; position: absolute; inset: 0; padding: 18mm; color: #111; font-family: Arial, sans-serif; }
