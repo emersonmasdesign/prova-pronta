@@ -133,30 +133,10 @@ function estimatedQuestionHeight(question: Question) {
 }
 
 function splitQuestionsIntoPages(items: Question[], mode: "single" | "double") {
-  const maximumPerPage = mode === "single" ? 6 : 6;
-  const capacity = mode === "single" ? 1160 : 1450;
+  const slotsPerPage = mode === "single" ? 2 : 4;
   const pages: Question[][] = [];
-  let current: Question[] = [];
-  let currentHeight = 0;
-  items.forEach((question) => {
-    const height = estimatedQuestionHeight(question);
-    const candidate = [...current, question];
-    const candidateHeight = mode === "double"
-      ? Math.max(
-        candidate.slice(0, Math.ceil(candidate.length / 2)).reduce((total, item) => total + estimatedQuestionHeight(item), 0),
-        candidate.slice(Math.ceil(candidate.length / 2)).reduce((total, item) => total + estimatedQuestionHeight(item), 0),
-      )
-      : currentHeight + height;
-    if (current.length && (current.length >= maximumPerPage || candidateHeight > capacity)) {
-      pages.push(current);
-      current = [];
-      currentHeight = 0;
-    }
-    current.push(question);
-    currentHeight += height;
-  });
-  if (current.length || !pages.length) pages.push(current);
-  return pages;
+  for (let index = 0; index < items.length; index += slotsPerPage) pages.push(items.slice(index, index + slotsPerPage));
+  return pages.length ? pages : [[]];
 }
 
 const STORAGE_KEY = "prova-pronta-draft-v4";
@@ -281,7 +261,7 @@ function PaperPage({ exam, logoPreview, pageMode, variantNumber, questions, star
     </div>}
     {!isExtra && pageNumber === 1 && <div className="paper-title-block" style={{ fontFamily: exam.fontFamily, fontSize: `${exam.fontSize}px` }}><h1>{exam.title || "AVALIAÇÃO"}</h1>{exam.notice && <div className="paper-notice" dangerouslySetInnerHTML={{ __html: exam.notice }} />}{exam.instructions && <p dangerouslySetInnerHTML={{ __html: exam.instructions }} />}</div>}
     {isExtra && <div className="paper-title-block extra-activity-title"><h1>ATIVIDADE EXTRA</h1></div>}
-    {isExtra ? <div className={`extra-activity-content ${extraActivityLayout === "single" ? "single-column" : "double-column"}`} dangerouslySetInnerHTML={{ __html: extraActivity || "" }} /> : <div className={`paper-columns ${pageMode === "single" ? "single-column" : ""}`} style={{ fontFamily: exam.fontFamily, fontSize: `${exam.fontSize}px` }}>{pageMode === "single" ? questions.map((question, index) => <QuestionPreview question={question} index={startIndex + index} key={question.id} />) : <><div className="question-column">{questions.slice(0, Math.ceil(questions.length / 2)).map((question, index) => <QuestionPreview question={question} index={startIndex + index} key={question.id} />)}</div><div className="question-column">{questions.slice(Math.ceil(questions.length / 2)).map((question, index) => <QuestionPreview question={question} index={startIndex + Math.ceil(questions.length / 2) + index} key={question.id} />)}</div></>}</div>}
+    {isExtra ? <div className={`extra-activity-content ${extraActivityLayout === "single" ? "single-column" : "double-column"}`} dangerouslySetInnerHTML={{ __html: extraActivity || "" }} /> : <div className={`paper-columns ${pageMode === "single" ? "single-column" : ""}`} style={{ fontFamily: exam.fontFamily, fontSize: `${exam.fontSize}px` }}>{questions.map((question, index) => <QuestionPreview question={question} index={startIndex + index} key={question.id} />)}</div>}
     <div className="paper-footer"><span>TIPO {variantNumber}{isExtra ? " · ATIVIDADE EXTRA" : ""}</span><span>PÁGINA {pageNumber} DE {pageCount}</span></div>
   </div>;
 }
@@ -344,7 +324,7 @@ export default function Home() {
   const [questions, setQuestions] = useState<Question[]>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
-      return saved ? JSON.parse(saved).questions || initialQuestions : initialQuestions;
+      return saved ? (JSON.parse(saved).questions || initialQuestions).slice(0, 8) : initialQuestions;
     } catch {
       return initialQuestions;
     }
@@ -395,8 +375,8 @@ export default function Home() {
   };
 
   const addQuestion = () => {
-    if (questions.length >= 10) {
-      toast.error("Você já atingiu o limite de 10 questões.");
+    if (questions.length >= 8) {
+      toast.error("Você já atingiu o limite de 8 questões.");
       return;
     }
     const id = nextQuestionId(questions);
@@ -558,7 +538,7 @@ export default function Home() {
     { id: "visual", label: "Visual", icon: LayoutGrid },
   ];
 
-  const questionCountLabel = useMemo(() => `${questions.length}/10 questões`, [questions.length]);
+  const questionCountLabel = useMemo(() => `${questions.length}/8 questões`, [questions.length]);
 
   return (
     <div className="app-shell">
@@ -629,8 +609,8 @@ export default function Home() {
             </section>
 
             <section className="editor-section" id="questoes">
-              <SectionHeader number="02" eyebrow="CONTEÚDO" title="As questões" description="Escreva até 10 questões. Você pode combinar perguntas abertas e múltipla escolha." />
-              <div className="question-limit"><div><strong>{questionCountLabel}</strong><span> · a prova fica mais objetiva assim.</span></div><div className="limit-bar"><span style={{ width: `${questions.length * 10}%` }} /></div></div>
+              <SectionHeader number="02" eyebrow="CONTEÚDO" title="As questões" description="Escreva até 8 questões. Você pode combinar perguntas abertas e múltipla escolha." />
+              <div className="question-limit"><div><strong>{questionCountLabel}</strong><span> · a prova fica mais objetiva assim.</span></div><div className="limit-bar"><span style={{ width: `${questions.length * 12.5}%` }} /></div></div>
               <div className="question-list">
                 {questions.map((question, index) => (
                   <article className="question-card" id={`question-${question.id}`} key={question.id}>
@@ -659,7 +639,7 @@ export default function Home() {
                   </article>
                 ))}
               </div>
-              <button className="add-question" onClick={addQuestion} disabled={questions.length >= 10}><Plus size={17} /> Adicionar questão <span>{questions.length >= 10 ? "limite atingido" : `${10 - questions.length} restantes`}</span></button>
+              <button className="add-question" onClick={addQuestion} disabled={questions.length >= 8}><Plus size={17} /> Adicionar questão <span>{questions.length >= 8 ? "limite atingido" : `${8 - questions.length} restantes`}</span></button>
             </section>
 
             <section className="editor-section" id="anticola">
