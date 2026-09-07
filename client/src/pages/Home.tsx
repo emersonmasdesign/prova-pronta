@@ -120,6 +120,38 @@ function seededShuffle<T>(items: T[], seed: number) {
   return output;
 }
 
+function estimatedQuestionHeight(question: Question) {
+  const textLength = (question.prompt || "").replace(/<[^>]+>/g, "").length;
+  const secondaryLength = (question.secondaryPrompt || "").replace(/<[^>]+>/g, "").length;
+  let height = 92 + Math.ceil(textLength / 85) * 18 + Math.ceil(secondaryLength / 85) * 16;
+  if (question.image) height += 175;
+  if (question.imageCaption) height += 24;
+  if (question.type === "multipla") height += question.options.reduce((total, option) => total + 18 + Math.ceil(option.length / 75) * 12, 0);
+  if (question.type === "discursiva") height += 78;
+  if (question.type === "jogo") height += 40;
+  return height;
+}
+
+function splitQuestionsIntoPages(items: Question[], mode: "single" | "double") {
+  const maximumPerPage = mode === "single" ? 2 : 4;
+  const capacity = mode === "single" ? 780 : 1450;
+  const pages: Question[][] = [];
+  let current: Question[] = [];
+  let currentHeight = 0;
+  items.forEach((question) => {
+    const height = estimatedQuestionHeight(question);
+    if (current.length && (current.length >= maximumPerPage || currentHeight + height > capacity)) {
+      pages.push(current);
+      current = [];
+      currentHeight = 0;
+    }
+    current.push(question);
+    currentHeight += height;
+  });
+  if (current.length || !pages.length) pages.push(current);
+  return pages;
+}
+
 const STORAGE_KEY = "prova-pronta-draft-v4";
 
 function nextQuestionId(questions: Question[]) {
@@ -337,10 +369,7 @@ export default function Home() {
   }, [exam.antiCheat, exam.variationCount, exam.shuffleDiscursive, questions]);
 
   const previewQuestions = variants[activeVariant - 1]?.questions || questions;
-  // A quantidade é deliberadamente conservadora porque textos e imagens têm alturas variáveis.
-  // Assim o rodapé nunca fica sobreposto ao conteúdo da questão.
-  const questionsPerPage = pageMode === "single" ? 1 : 2;
-  const previewQuestionPages = useMemo(() => Array.from({ length: Math.max(1, Math.ceil(previewQuestions.length / questionsPerPage)) }, (_, index) => previewQuestions.slice(index * questionsPerPage, (index + 1) * questionsPerPage)), [previewQuestions, questionsPerPage]);
+  const previewQuestionPages = useMemo(() => splitQuestionsIntoPages(previewQuestions, pageMode), [previewQuestions, pageMode]);
   useEffect(() => {
     if (activeVariant > variants.length) setActiveVariant(1);
   }, [activeVariant, variants.length]);
@@ -658,11 +687,11 @@ export default function Home() {
           </div>
           <div className="preview-stage">
             <div id="paper-preview" className="paper-set">
-              {previewQuestionPages.map((pageQuestions, pageIndex) => <PaperPage key={`active-${activeVariant}-${pageIndex}`} exam={exam} logoPreview={logoPreview} pageMode={pageMode} variantNumber={activeVariant} questions={pageQuestions} startIndex={pageIndex * questionsPerPage} pageNumber={pageIndex + 1} pageCount={previewQuestionPages.length} />)}
+              {previewQuestionPages.map((pageQuestions, pageIndex) => <PaperPage key={`active-${activeVariant}-${pageIndex}`} exam={exam} logoPreview={logoPreview} pageMode={pageMode} variantNumber={activeVariant} questions={pageQuestions} startIndex={previewQuestions.indexOf(pageQuestions[0])} pageNumber={pageIndex + 1} pageCount={previewQuestionPages.length} />)}
               {exam.extraActivity && <PaperPage exam={exam} logoPreview={logoPreview} pageMode={pageMode} variantNumber={activeVariant} questions={[]} startIndex={0} extraActivity={exam.extraActivity} extraActivityLayout={exam.extraActivityLayout} pageNumber={previewQuestionPages.length + 1} pageCount={previewQuestionPages.length + 1} />}
               {variants.filter((variant) => variant.number !== activeVariant).map((variant) => {
-                const pages = Array.from({ length: Math.max(1, Math.ceil(variant.questions.length / questionsPerPage)) }, (_, index) => variant.questions.slice(index * questionsPerPage, (index + 1) * questionsPerPage));
-                return <div className="print-variant" key={`print-variant-${variant.number}`}>{pages.map((pageQuestions, pageIndex) => <PaperPage key={`${variant.number}-${pageIndex}`} exam={exam} logoPreview={logoPreview} pageMode={pageMode} variantNumber={variant.number} questions={pageQuestions} startIndex={pageIndex * questionsPerPage} pageNumber={pageIndex + 1} pageCount={pages.length} />)}{exam.extraActivity && <PaperPage exam={exam} logoPreview={logoPreview} pageMode={pageMode} variantNumber={variant.number} questions={[]} startIndex={0} extraActivity={exam.extraActivity} extraActivityLayout={exam.extraActivityLayout} pageNumber={pages.length + 1} pageCount={pages.length + 1} />}</div>;
+                const pages = splitQuestionsIntoPages(variant.questions, pageMode);
+                return <div className="print-variant" key={`print-variant-${variant.number}`}>{pages.map((pageQuestions, pageIndex) => <PaperPage key={`${variant.number}-${pageIndex}`} exam={exam} logoPreview={logoPreview} pageMode={pageMode} variantNumber={variant.number} questions={pageQuestions} startIndex={variant.questions.indexOf(pageQuestions[0])} pageNumber={pageIndex + 1} pageCount={pages.length} />)}{exam.extraActivity && <PaperPage exam={exam} logoPreview={logoPreview} pageMode={pageMode} variantNumber={variant.number} questions={[]} startIndex={0} extraActivity={exam.extraActivity} extraActivityLayout={exam.extraActivityLayout} pageNumber={pages.length + 1} pageCount={pages.length + 1} />}</div>;
               })}
             </div>
             <div className="answer-key-print"><h1>GABARITO</h1><h2>{exam.title || "AVALIAÇÃO"}</h2>{variants.map((variant) => <section key={variant.number}><h3>TIPO {variant.number}</h3>{variant.questions.filter((question) => question.type === "multipla").map((question) => <p key={question.id}>{variant.questions.findIndex((item) => item.id === question.id) + 1}. <strong>{question.correctOption === undefined || question.correctOption === null ? "não informado" : String.fromCharCode(65 + question.correctOption)}</strong></p>)}</section>)}</div>
