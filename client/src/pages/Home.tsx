@@ -133,7 +133,7 @@ function estimatedQuestionHeight(question: Question) {
 }
 
 function splitQuestionsIntoPages(items: Question[], mode: "single" | "double") {
-  const maximumPerPage = mode === "single" ? 2 : 4;
+  const maximumPerPage = mode === "single" ? 2 : 6;
   const capacity = mode === "single" ? 900 : 1450;
   const pages: Question[][] = [];
   let current: Question[] = [];
@@ -281,7 +281,7 @@ function PaperPage({ exam, logoPreview, pageMode, variantNumber, questions, star
     </div>}
     {!isExtra && pageNumber === 1 && <div className="paper-title-block" style={{ fontFamily: exam.fontFamily, fontSize: `${exam.fontSize}px` }}><h1>{exam.title || "AVALIAÇÃO"}</h1>{exam.notice && <div className="paper-notice" dangerouslySetInnerHTML={{ __html: exam.notice }} />}{exam.instructions && <p dangerouslySetInnerHTML={{ __html: exam.instructions }} />}</div>}
     {isExtra && <div className="paper-title-block extra-activity-title"><h1>ATIVIDADE EXTRA</h1></div>}
-    {isExtra ? <div className={`extra-activity-content ${extraActivityLayout === "single" ? "single-column" : "double-column"}`} dangerouslySetInnerHTML={{ __html: extraActivity || "" }} /> : <div className={`paper-columns ${pageMode === "single" ? "single-column" : ""}`} style={{ fontFamily: exam.fontFamily, fontSize: `${exam.fontSize}px` }}>{pageMode === "single" ? questions.map((question, index) => <QuestionPreview question={question} index={startIndex + index} key={question.id} />) : <><div className="question-column">{questions.filter((_, index) => index % 2 === 0).map((question, index) => <QuestionPreview question={question} index={startIndex + index * 2} key={question.id} />)}</div><div className="question-column">{questions.filter((_, index) => index % 2 === 1).map((question, index) => <QuestionPreview question={question} index={startIndex + index * 2 + 1} key={question.id} />)}</div></>}</div>}
+    {isExtra ? <div className={`extra-activity-content ${extraActivityLayout === "single" ? "single-column" : "double-column"}`} dangerouslySetInnerHTML={{ __html: extraActivity || "" }} /> : <div className={`paper-columns ${pageMode === "single" ? "single-column" : ""}`} style={{ fontFamily: exam.fontFamily, fontSize: `${exam.fontSize}px` }}>{pageMode === "single" ? questions.map((question, index) => <QuestionPreview question={question} index={startIndex + index} key={question.id} />) : <><div className="question-column">{questions.slice(0, Math.ceil(questions.length / 2)).map((question, index) => <QuestionPreview question={question} index={startIndex + index} key={question.id} />)}</div><div className="question-column">{questions.slice(Math.ceil(questions.length / 2)).map((question, index) => <QuestionPreview question={question} index={startIndex + Math.ceil(questions.length / 2) + index} key={question.id} />)}</div></>}</div>}
     <div className="paper-footer"><span>TIPO {variantNumber}{isExtra ? " · ATIVIDADE EXTRA" : ""}</span><span>PÁGINA {pageNumber} DE {pageCount}</span></div>
   </div>;
 }
