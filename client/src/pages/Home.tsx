@@ -134,7 +134,10 @@ function estimatedQuestionHeight(question: Question) {
 
 function splitQuestionsIntoPages(items: Question[], mode: "single" | "double") {
   const maximumPerPage = mode === "single" ? 2 : 4;
-  const capacity = mode === "single" ? 780 : 1450;
+  // Em duas colunas, a capacidade é calculada para até quatro questões
+  // (duas por coluna); o limite rígido de quantidade evita que a página
+  // fique artificialmente limitada a apenas duas questões.
+  const capacity = mode === "single" ? 900 : 3000;
   const pages: Question[][] = [];
   let current: Question[] = [];
   let currentHeight = 0;
