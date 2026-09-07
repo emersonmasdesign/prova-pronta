@@ -260,10 +260,10 @@ button:disabled { cursor: not-allowed; opacity: .45; }
   body { background: white !important; }
   body * { visibility: hidden !important; }
   body.printing-exam #paper-preview, body.printing-exam #paper-preview * { visibility: visible !important; }
-  body.printing-exam #paper-preview { position: static; width: auto; min-height: 0; margin: 0; transform: none; padding: 0; }
+  body.printing-exam #paper-preview { position: static; display: flex; width: auto; min-height: 0; margin: 0; padding: 0; transform: none; }
   body.printing-exam .print-variant { display: none !important; }
-  body.printing-exam .paper { width: 210mm; height: 297mm; min-height: 0; margin: 0; transform: none; border: 0; box-shadow: none; padding: 11.64mm 14.29mm 6.88mm; break-after: page; page-break-after: always; }
-  body.printing-exam .paper-columns { height: 0; flex: 1 1 auto; }
+  body.printing-exam .paper { width: 210mm; height: 297mm; min-height: 0; margin: 0; transform: none; border: 0; box-shadow: none; padding: 44px 54px 26px; break-after: page; page-break-after: always; }
+  body.printing-exam .paper-columns { height: 0; flex: 1 1 auto; min-height: 0; }
   body.printing-exam .paper:last-child { break-after: auto; page-break-after: auto; }
   body.printing-exam .paper-footer { width: 100%; margin-top: auto; padding-top: 2mm; background: white; border-top: 0.2mm solid #d8d8d8; }
   body.printing-answer-key * { visibility: hidden !important; }
