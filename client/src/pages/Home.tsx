@@ -124,7 +124,7 @@ function estimatedQuestionHeight(question: Question) {
   const textLength = (question.prompt || "").replace(/<[^>]+>/g, "").length;
   const secondaryLength = (question.secondaryPrompt || "").replace(/<[^>]+>/g, "").length;
   let height = 92 + Math.ceil(textLength / 85) * 18 + Math.ceil(secondaryLength / 85) * 16;
-  if (question.image) height += 175;
+  if (question.image) height += 250;
   if (question.imageCaption) height += 24;
   if (question.type === "multipla") height += question.options.reduce((total, option) => total + 18 + Math.ceil(option.length / 75) * 12, 0);
   if (question.type === "discursiva") height += 78;
@@ -133,8 +133,8 @@ function estimatedQuestionHeight(question: Question) {
 }
 
 function splitQuestionsIntoPages(items: Question[], mode: "single" | "double") {
-  const maximumPerPage = mode === "single" ? 6 : 12;
-  const capacity = mode === "single" ? 1160 : 2320;
+  const maximumPerPage = mode === "single" ? 6 : 6;
+  const capacity = mode === "single" ? 1160 : 1450;
   const pages: Question[][] = [];
   let current: Question[] = [];
   let currentHeight = 0;
