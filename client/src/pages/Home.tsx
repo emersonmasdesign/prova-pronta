@@ -123,10 +123,10 @@ function seededShuffle<T>(items: T[], seed: number) {
 function estimatedQuestionHeight(question: Question) {
   const textLength = (question.prompt || "").replace(/<[^>]+>/g, "").length;
   const secondaryLength = (question.secondaryPrompt || "").replace(/<[^>]+>/g, "").length;
-  let height = 92 + Math.ceil(textLength / 85) * 18 + Math.ceil(secondaryLength / 85) * 16;
-  if (question.image) height += 250;
+  let height = 105 + Math.ceil(textLength / 50) * 17 + Math.ceil(secondaryLength / 50) * 16;
+  if (question.image) height += 280;
   if (question.imageCaption) height += 24;
-  if (question.type === "multipla") height += question.options.reduce((total, option) => total + 18 + Math.ceil(option.length / 75) * 12, 0);
+  if (question.type === "multipla") height += question.options.reduce((total, option) => total + 20 + Math.ceil(option.length / 45) * 14, 0);
   if (question.type === "discursiva") height += 78;
   if (question.type === "jogo") height += 40;
   return height;
@@ -134,7 +134,7 @@ function estimatedQuestionHeight(question: Question) {
 
 function splitQuestionsIntoPages(items: Question[], mode: "single" | "double") {
   const maximumPerPage = mode === "single" ? 6 : 6;
-  const capacity = mode === "single" ? 1160 : 1450;
+  const capacity = mode === "single" ? 980 : 980;
   const pages: Question[][] = [];
   let current: Question[] = [];
   let currentHeight = 0;
