@@ -133,8 +133,8 @@ function estimatedQuestionHeight(question: Question) {
 }
 
 function splitQuestionsIntoPages(items: Question[], mode: "single" | "double") {
-  const maximumPerPage = mode === "single" ? 3 : 6;
-  const capacity = mode === "single" ? 900 : 1450;
+  const maximumPerPage = mode === "single" ? 6 : 12;
+  const capacity = mode === "single" ? 1160 : 2320;
   const pages: Question[][] = [];
   let current: Question[] = [];
   let currentHeight = 0;
@@ -143,8 +143,8 @@ function splitQuestionsIntoPages(items: Question[], mode: "single" | "double") {
     const candidate = [...current, question];
     const candidateHeight = mode === "double"
       ? Math.max(
-        candidate.filter((_, index) => index % 2 === 0).reduce((total, item) => total + estimatedQuestionHeight(item), 0),
-        candidate.filter((_, index) => index % 2 === 1).reduce((total, item) => total + estimatedQuestionHeight(item), 0),
+        candidate.slice(0, Math.ceil(candidate.length / 2)).reduce((total, item) => total + estimatedQuestionHeight(item), 0),
+        candidate.slice(Math.ceil(candidate.length / 2)).reduce((total, item) => total + estimatedQuestionHeight(item), 0),
       )
       : currentHeight + height;
     if (current.length && (current.length >= maximumPerPage || candidateHeight > capacity)) {
@@ -327,7 +327,7 @@ async function imageTransformation(source: string, percentage = 100) {
   const image = new Image();
   image.src = source;
   await image.decode();
-  const width = Math.max(40, Math.round(280 * (percentage / 100)));
+  const width = Math.max(40, Math.min(520, Math.round(280 * (percentage / 100))));
   const height = Math.max(30, Math.round(width * (image.naturalHeight / image.naturalWidth)));
   return { width, height };
 }
@@ -651,7 +651,7 @@ export default function Home() {
                       <div className="field"><span>Enunciado</span><RichTextField value={question.prompt} onChange={(value) => updateQuestion(question.id, { prompt: value })} placeholder="Digite o enunciado da questão..." /></div>
                       <div className="field"><span>Continuação do enunciado principal ou novo enunciado (opcional)</span><RichTextField value={question.secondaryPrompt || ""} onChange={(value) => updateQuestion(question.id, { secondaryPrompt: value })} placeholder="Digite a continuação do enunciado principal ou um novo enunciado..." /></div>
                       <div className="question-media-row"><label className="image-question-button"><ImagePlus size={15} /> {question.image ? "Trocar imagem" : "Inserir imagem"}<input type="file" accept="image/png,image/jpeg,image/webp" onChange={(event) => handleQuestionImage(question.id, event.target.files?.[0])} /></label>{question.image && <button type="button" className="remove-image-button" onClick={() => updateQuestion(question.id, { image: "" })}><X size={13} /> Remover</button>}</div>
-                      {question.image && <label className="image-size-control"><span>Tamanho da imagem</span><input type="range" min="30" max="100" step="5" value={question.imageWidth || 100} onChange={(event) => updateQuestion(question.id, { imageWidth: Number(event.target.value) })} /><strong>{question.imageWidth || 100}%</strong></label>}
+                      {question.image && <label className="image-size-control"><span>Tamanho da imagem</span><input type="range" min="30" max="180" step="5" value={question.imageWidth || 100} onChange={(event) => updateQuestion(question.id, { imageWidth: Number(event.target.value) })} /><strong>{question.imageWidth || 100}%</strong></label>}
                       {question.image && <Field label="Legenda da imagem (opcional)" value={question.imageCaption || ""} onChange={(value) => updateQuestion(question.id, { imageCaption: value })} placeholder="Fonte, autor ou informação complementar" />}
                       {question.image && <img className="editor-question-image" src={question.image} alt="Prévia da imagem da questão" />}
                       {question.type === "multipla" && <div className="options-editor"><div className="field-label">Alternativas</div>{question.options.map((option, optionIndex) => <div className="option-row" key={optionIndex}><span>{String.fromCharCode(65 + optionIndex)}</span><input value={option} placeholder={`Alternativa ${String.fromCharCode(65 + optionIndex)}`} onChange={(event) => updateOption(question.id, optionIndex, event.target.value)} /><button type="button" className={`correct-option ${question.correctOption === optionIndex ? "selected" : ""}`} title="Marcar alternativa correta" onClick={() => updateQuestion(question.id, { correctOption: question.correctOption === optionIndex ? null : optionIndex })}>{question.correctOption === optionIndex ? <Check size={12} /> : "✓"}</button></div>)}</div>}

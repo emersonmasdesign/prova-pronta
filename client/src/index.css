@@ -214,7 +214,7 @@ button:disabled { cursor: not-allowed; opacity: .45; }
 .option-circle::after { content: ")"; }
 .answer-lines { display: flex; flex-direction: column; gap: 9px; padding: 6px 0 0 17px; }
 .answer-lines span { display: block; height: 1px; background: #777; }
-.question-image { display: block; width: auto; max-width: 100%; height: auto; max-height: 145px; margin: 8px auto 0; object-fit: contain; break-inside: avoid; page-break-inside: avoid; }
+.question-image { display: block; width: auto; max-width: 100%; height: auto; max-height: 260px; margin: 8px auto 0; object-fit: contain; break-inside: avoid; page-break-inside: avoid; }
 .question-caption { margin: 3px 0 0; color: #68717D; font-size: 8px; font-style: italic; line-height: 1.25; text-align: center; }
 .game-placeholder { min-height: 105px; margin: 9px 0 0 17px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; border: 1px dashed #777; color: #333; font-size: 10px; text-align: center; }
 .game-placeholder span { color: #777; font-size: 8px; }
