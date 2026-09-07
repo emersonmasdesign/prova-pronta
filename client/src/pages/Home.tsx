@@ -337,7 +337,9 @@ export default function Home() {
   }, [exam.antiCheat, exam.variationCount, exam.shuffleDiscursive, questions]);
 
   const previewQuestions = variants[activeVariant - 1]?.questions || questions;
-  const questionsPerPage = pageMode === "single" ? 2 : 4;
+  // A quantidade é deliberadamente conservadora porque textos e imagens têm alturas variáveis.
+  // Assim o rodapé nunca fica sobreposto ao conteúdo da questão.
+  const questionsPerPage = pageMode === "single" ? 1 : 2;
   const previewQuestionPages = useMemo(() => Array.from({ length: Math.max(1, Math.ceil(previewQuestions.length / questionsPerPage)) }, (_, index) => previewQuestions.slice(index * questionsPerPage, (index + 1) * questionsPerPage)), [previewQuestions, questionsPerPage]);
   useEffect(() => {
     if (activeVariant > variants.length) setActiveVariant(1);
