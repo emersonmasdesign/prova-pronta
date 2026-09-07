@@ -200,16 +200,18 @@ button:disabled { cursor: not-allowed; opacity: .45; }
 .extra-activity-content.double-column { column-count: 2; column-gap: 14mm; }
 .extra-activity-content.single-column { column-count: 1; }
 .extra-activity-title { margin-bottom: 12px; }
-.question-preview { break-inside: avoid; page-break-inside: avoid; margin-bottom: 17px; }
-.question-title { display: grid; grid-template-columns: 16px 1fr auto; gap: 3px; align-items: start; color: #141414; font-size: 10px; line-height: 1.35; }
+.question-preview { break-inside: auto; page-break-inside: auto; margin-bottom: 9px; min-width: 0; }
+.question-title { display: grid; grid-template-columns: 16px minmax(0, 1fr) auto; gap: 3px; align-items: start; color: #141414; font-size: 10px; line-height: 1.35; overflow-wrap: anywhere; }
+.question-title > span { min-width: 0; overflow-wrap: anywhere; }
 .question-title strong { color: #141414; font-size: 10px; }
 .question-title em { color: #141414; font-size: 8px; font-style: normal; white-space: nowrap; }
-.question-secondary { margin: 5px 0 0 19px; color: #141414; font-size: 10px; line-height: 1.35; }
-.options-preview { display: grid; grid-template-columns: 1fr; gap: 3px; padding: 7px 0 0 17px; }
-.option-preview { display: flex; align-items: flex-start; gap: 3px; color: #141414; font-size: 9px; line-height: 1.3; }
+.question-secondary { margin: 4px 0 0 19px; color: #141414; font-size: 10px; line-height: 1.35; overflow-wrap: anywhere; }
+.options-preview { display: grid; grid-template-columns: 1fr; gap: 2px; padding: 5px 0 0 17px; }
+.option-preview { display: flex; align-items: flex-start; gap: 3px; min-width: 0; color: #141414; font-size: 9px; line-height: 1.3; overflow-wrap: anywhere; }
+.option-preview > span:last-child { min-width: 0; overflow-wrap: anywhere; }
 .option-circle { display: inline; width: auto; height: auto; color: #141414; border: 0; font-size: 9px; font-weight: 400; }
 .option-circle::after { content: ")"; }
-.answer-lines { display: flex; flex-direction: column; gap: 11px; padding: 8px 0 0 17px; }
+.answer-lines { display: flex; flex-direction: column; gap: 9px; padding: 6px 0 0 17px; }
 .answer-lines span { display: block; height: 1px; background: #777; }
 .question-image { display: block; width: auto; max-width: 100%; height: auto; max-height: 145px; margin: 8px auto 0; object-fit: contain; break-inside: avoid; page-break-inside: avoid; }
 .question-caption { margin: 3px 0 0; color: #68717D; font-size: 8px; font-style: italic; line-height: 1.25; text-align: center; }
