@@ -445,7 +445,7 @@ export default function Home() {
 
   const exportPdf = () => {
     const exportPreviewPdf = async () => {
-      const pages = Array.from(document.querySelectorAll<HTMLElement>("#paper-preview > .paper-set > .paper"));
+      const pages = Array.from(document.querySelectorAll<HTMLElement>("#paper-preview > .paper"));
       if (!pages.length) {
         toast.error("Não foi possível localizar as páginas da prévia.");
         return;
