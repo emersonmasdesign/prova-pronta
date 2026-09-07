@@ -134,7 +134,7 @@ function estimatedQuestionHeight(question: Question) {
 
 function splitQuestionsIntoPages(items: Question[], mode: "single" | "double") {
   const maximumPerPage = mode === "single" ? 6 : 6;
-  const capacity = mode === "single" ? 980 : 980;
+  const capacity = mode === "single" ? 1160 : 1450;
   const pages: Question[][] = [];
   let current: Question[] = [];
   let currentHeight = 0;
