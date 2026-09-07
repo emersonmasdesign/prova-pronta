@@ -223,6 +223,11 @@ button:disabled { cursor: not-allowed; opacity: .45; }
 .preview-note { justify-content: center; gap: 6px; padding: 9px; color: #77838a; background: #f8f9f9; border-top: 1px solid #d5dee1; font-size: 9px; }
 .answer-key-print { display: none; }
 
+/* A exportação usa as mesmas folhas da prévia, sem o motor de impressão do navegador. */
+body.pdf-capture .preview-stage { overflow: visible; padding: 0; }
+body.pdf-capture .paper-set { gap: 0; align-items: flex-start; }
+body.pdf-capture .paper { transform: none; margin: 0; box-shadow: none; border: 0; }
+
 @media (max-width: 1200px) {
   .workspace { grid-template-columns: minmax(480px, 53%) 1fr; }
   .editor-heading, .editor-scroll, .section-tabs { padding-left: 28px; padding-right: 28px; }

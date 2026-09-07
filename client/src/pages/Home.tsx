@@ -41,6 +41,8 @@ import {
   WidthType,
 } from "docx";
 import { toast } from "sonner";
+import html2canvas from "html2canvas";
+import jsPDF from "jspdf";
 
 type QuestionType = "discursiva" | "multipla" | "jogo";
 
@@ -442,11 +444,30 @@ export default function Home() {
   };
 
   const exportPdf = () => {
-    document.body.classList.add("printing-exam");
-    window.setTimeout(() => {
-      window.print();
-      window.setTimeout(() => document.body.classList.remove("printing-exam"), 400);
-    }, 50);
+    const exportPreviewPdf = async () => {
+      const pages = Array.from(document.querySelectorAll<HTMLElement>("#paper-preview > .paper-set > .paper"));
+      if (!pages.length) {
+        toast.error("Não foi possível localizar as páginas da prévia.");
+        return;
+      }
+      document.body.classList.add("pdf-capture");
+      await new Promise((resolve) => window.requestAnimationFrame(() => window.requestAnimationFrame(resolve)));
+      try {
+        const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4", compress: true });
+        for (let index = 0; index < pages.length; index += 1) {
+          const canvas = await html2canvas(pages[index], { backgroundColor: "#ffffff", scale: 2, useCORS: true, logging: false });
+          if (index > 0) pdf.addPage("a4", "portrait");
+          pdf.addImage(canvas.toDataURL("image/jpeg", 0.94), "JPEG", 0, 0, 210, 297, undefined, "FAST");
+        }
+        pdf.save("prova.pdf");
+        toast.success("PDF gerado exatamente a partir da prévia.");
+      } catch {
+        toast.error("Não foi possível gerar o PDF. Tente novamente.");
+      } finally {
+        document.body.classList.remove("pdf-capture");
+      }
+    };
+    void exportPreviewPdf();
   };
 
   const printAnswerKey = () => {
